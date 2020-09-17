@@ -4,8 +4,8 @@
   "description": "Starting an incident management flow from a Slack Slash Command",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node index.js"
+    "test": "jest",
+    "start": "node src/index.js"
   },
   "author": "René Feiner - MessageBird",
   "license": "ISC",
@@ -15,5 +15,8 @@
     "moment": "^2.22.2",
     "request": "^2.88.0",
     "request-promise": "^4.2.5"
+  },
+  "devDependencies": {
+    "jest": "^26.4.2"
   }
 }

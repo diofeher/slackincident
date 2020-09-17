@@ -1,11 +1,9 @@
-var exports = module.exports = {};
-
 const {google} = require('googleapis');
 const moment = require('moment');
 
 function getoAuth2Client(){
-  if(!process.env.GOOGLEAPI_CLIENT_ID || !process.env.GOOGLEAPI_CLIENT_SECRET){
-    console.log('GOOGLEAPI_CLIENT_ID or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
+  if(!process.env.GOOGLEAPI_CLIENT_ID || !process.env.GOOGLEAPI_CLIENT_SECRET || !process.env.GOOGLE_AUTHORIZATION_TOKEN){
+    console.log('GOOGLEAPI_CLIENT_ID, GOOGLE_AUTHORIZATION_TOKEN or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
     return;
   }
   var client_secret = process.env.GOOGLEAPI_CLIENT_SECRET;
@@ -17,7 +15,7 @@ function getoAuth2Client(){
   return oAuth2Client;
 }
 
-exports.createIncidentsLogFile = function createIncidentsLogFile(fileName, folder, incidentTitle, reportedBy, onSuccess) {
+const createIncidentsLogFile = (fileName, folder, incidentTitle, reportedBy, onSuccess) => {
   const oAuth2Client = getoAuth2Client();
   if(!oAuth2Client){
     return;
@@ -81,7 +79,7 @@ exports.createIncidentsLogFile = function createIncidentsLogFile(fileName, folde
             },
             fields:'namedStyleType'
           }
-        }, 
+        },
       },
       {
         text: "Times in UTC\n\n",
@@ -106,7 +104,7 @@ exports.createIncidentsLogFile = function createIncidentsLogFile(fileName, folde
             },
             fields:'namedStyleType'
           }
-        }, 
+        },
       },
       {
         text: "\n\n"
@@ -142,7 +140,7 @@ exports.createIncidentsLogFile = function createIncidentsLogFile(fileName, folde
     function(){docs.documents.batchUpdate({
       documentId: res.data.id,
       resource:{
-        "requests": requests        
+        "requests": requests
       }
     },(err, res) =>{
       if (err){
@@ -159,7 +157,7 @@ exports.createIncidentsLogFile = function createIncidentsLogFile(fileName, folde
  * Create an OAuth2 client with the given credentials
  * @param {Object} credentials The authorization client credentials.
  */
-exports.registerIncidentEvent =  function registerIncidentEvent(incidentId, incidentName, reportedBy, slackChannel, onSuccess) {
+const registerIncidentEvent = (incidentId, incidentName, reportedBy, slackChannel, onSuccess) => {
     const oAuth2Client = getoAuth2Client();
     if(!oAuth2Client){
       return;
@@ -235,4 +233,73 @@ function createEvent(auth, incidentName, incidentId, incidentDescription, onSucc
           }
         );
   });
+}
+
+
+const addUserToGroup = async (groupKey, userEmail) => {
+  console.log('Adding ' + userEmail + ' to firefighters group.');
+  const auth = getoAuth2Client();
+  const groupsAPI = await google.admin('directory_v1');
+
+  const response = await groupsAPI.members.insert({
+    groupKey,
+    auth,
+    requestBody: {
+      email: userEmail,
+      role: "MEMBER",
+    }
+  });
+  return response.data;
+}
+
+
+const getGroupMembers = async (groupKey) => {
+  const auth = getoAuth2Client();
+  const groupsAPI = await google.admin('directory_v1');
+
+  const response = await groupsAPI.members.list({
+    groupKey,
+    auth,
+  });
+  return response.data?.members || [];
+}
+
+
+const removeUserFromGroup = async (groupKey, memberKey) => {
+  console.log(groupKey, memberKey);
+  const auth = getoAuth2Client();
+  const groupsAPI = await google.admin('directory_v1');
+
+  const response = await groupsAPI.members.delete({
+    groupKey,
+    memberKey,
+    auth,
+  });
+
+  return response.status == 204;
+}
+
+
+const clearGroupMembers = async (groupKey) => {
+  const auth = getoAuth2Client();
+
+  const groupsAPI = await google.admin('directory_v1');
+  const response = await groupsAPI.members.list({
+      groupKey,
+      auth,
+  });
+
+  (response.data.members || []).map((member) => {
+    removeUserFromGroup(groupKey, member.email);
+  });
+}
+
+
+module.exports = {
+  addUserToGroup,
+  getGroupMembers,
+  createIncidentsLogFile,
+  registerIncidentEvent,
+  removeUserFromGroup,
+  clearGroupMembers,
 }
