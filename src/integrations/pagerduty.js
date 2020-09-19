@@ -44,7 +44,7 @@ const getIncidentBySlackChannel = async (slackChannelID) => {
 }
 
 const getTotalActiveIncidents = async () => {
-    return await getActiveIncidents().total;
+    return (await getActiveIncidents()).total;
 }
 
 const getIncidentDetails = async (incidentID) => {
@@ -187,6 +187,7 @@ function alertIncidentManager(incidentName, incidentSlackChannelID, incidentCrea
 
 
 module.exports = {
+    getActiveIncidents,
     getIncidentBySlackChannel,
     getIncidentDetails,
     getTotalActiveIncidents,

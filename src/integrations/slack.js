@@ -127,7 +127,6 @@ async function createSlackChannel(incidentName, incidentCreatorSlackUserId, inci
         }
     });
 
-    // TODO: This is sometimes is raising exceptions (Dio)
     let channelId = res.channel.id;
 
     setChannelTopic(channelId, incidentName + '. Please join conference call. See pinned message for details.');

@@ -24,6 +24,25 @@ const COLORS = {
     GREEN: '#008000',
 }
 
+const removeInactiveIncidentMembers = async (channelID) => {
+    const activeIncidents = (await pagerduty.getActiveIncidents())?.incidents;
+
+    var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
+        const details = await pagerduty.getIncidentDetails(incident.id);
+        const members = await slack.getMembersChannel(details.slack_channel);
+        return members || [];
+    }));
+    const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
+
+    const activeMembers = await slack.getMembersChannel(channelID);
+
+    activeMembers.map(async (member) => {
+        if(!membersActiveIncidents.includes(member)) {
+            const email = (await slack.getProfileInfo(member)).email;
+            googleapi.removeUserFromGroup(process.env.GSUITE_GROUP_KEY, email);
+        };
+    });
+}
 
 function sendIncidentLogFileToChannel(incidentSlackChannelId, docUrl) {
     var slackMessage = {
@@ -64,7 +83,7 @@ function verifySlackWebhook(body) {
 }
 
 async function createIncidentFlow(body) {
-    var incidentId = moment().format('YYMMDDHHmm');
+    var incidentId = moment().format('YYYYMMDDHHmmss');
     var incidentName = body.text;
     var incidentCreatorSlackHandle = body.user_name;
     var incidentCreatorSlackUserId = body.user_id;
@@ -131,11 +150,12 @@ const onIncidentAcknowledgement = (message) => {
 
 const onIncidentManagerResolved = async (message) => {
     const groupKey = process.env.GSUITE_GROUP_KEY;
+    const details = await pagerduty.getIncidentDetails(message.incident.id);
     const imEmail = await pagerduty.onIncidentManagerResolved(message);
+    const totalActiveEvents = await pagerduty.getTotalActiveIncidents();
 
-    if(pagerduty.getTotalActiveIncidents() > 0) {
-        // get members from this slack channel
-        // remove them from Group
+    if(totalActiveEvents > 0) {
+        removeInactiveIncidentMembers(details.slack_channel);
     } else {
         const members = await googleapi.getGroupMembers(groupKey);
         if(members.includes(imEmail)) {
@@ -144,7 +164,6 @@ const onIncidentManagerResolved = async (message) => {
         googleapi.clearGroupMembers(groupKey);
     }
 
-    const details = await pagerduty.getIncidentDetails(message.incident.id);
     var slackMessage = {
         icon_emoji: ':sweat_drops:',
         attachments: [
@@ -193,12 +212,11 @@ const onBreakGlass = async (body) => {
 
 
     var slackMessage = {
-        text: `${username} broke the glass. With great power comes great responsibility.`,
         icon_emoji: ':fire_engine:',
-        channel: '',
-        attachments: [],
-        link_names: true,
-        parse: 'full',
+        attachments: [{
+            text: `${username} broke the glass. With great power comes great responsibility.`,
+            color: COLORS.RED,
+        }],
     };
     slack.sendSlackMessageToChannel(channelId, slackMessage);
     const userInfo = await slack.getProfileInfo(body.user_id);
