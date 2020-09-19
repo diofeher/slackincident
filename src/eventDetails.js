@@ -5,7 +5,7 @@ const moment = require('moment');
 
 function getoAuth2Client(){
   if(!process.env.GOOGLEAPI_CLIENT_ID || !process.env.GOOGLEAPI_CLIENT_SECRET){
-    console.log('GOOGLEAPI_CLIENT_ID or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
+    console.error('GOOGLEAPI_CLIENT_ID or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
     return;
   }
   var client_secret = process.env.GOOGLEAPI_CLIENT_SECRET;
@@ -70,7 +70,7 @@ function createEvent(auth, incidentName, incidentId, incidentDescription, eventH
     resource: event,
   }, function(err, event) {
         if (err) {
-          console.log('There was an error contacting the Calendar service: ' + err);
+          console.error('There was an error contacting the Calendar service: ' + err);
           return;
         }
 
@@ -88,7 +88,7 @@ function createEvent(auth, incidentName, incidentId, incidentDescription, eventH
           conferenceDataVersion: 1
         }, function(err, event) {
             if(err){
-              console.log('There was an error adding the conference details');
+              console.error('There was an error adding the conference details');
             }
             else{
               eventHandle['obj'] = event;

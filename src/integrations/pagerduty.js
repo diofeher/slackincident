@@ -15,7 +15,7 @@ class NotFound extends Error {
 
 const getActiveIncidents = async () => {
     const response = await rp.get({
-        url: 'https://api.pagerduty.com/incidents?statuses[]=triggered&total=true',
+        url: 'https://api.pagerduty.com/incidents?statuses[]=triggered&statuses[]=acknowledged&total=true',
         headers: {
             'Authorization': 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY
         },
@@ -23,14 +23,18 @@ const getActiveIncidents = async () => {
     return JSON.parse(response);
 }
 
+const asyncFilter = async (arr, predicate) => {
+    const results = await Promise.all(arr.map(predicate));
+    return arr.filter((_v, index) => results[index]);
+};
+
 const getIncidentBySlackChannel = async (slackChannelID) => {
-    const activeIncidents = await getActiveIncidents();
-    const filteredIncidents = await Promise.all(
-        (activeIncidents.incidents || []).filter(async (incident) => {
-            const details = await getIncidentDetails(incident.id);
-            return slackChannelID == details.slack_channel;
-        })
-    );
+    const activeIncidents = (await getActiveIncidents())?.incidents || [];
+
+    const filteredIncidents = await asyncFilter(activeIncidents, async (incident) => {
+        const details = await getIncidentDetails(incident.id);
+        return slackChannelID == details.slack_channel;
+    });
 
     if(filteredIncidents.length > 0) {
         return filteredIncidents[0];
@@ -95,10 +99,9 @@ const onIncidentManagerAcknowledge = async (message) => {
         },
         async function (error, response, body) {
             if(error){
-                console.log(error);
+                console.error(error);
             }
             else{
-                console.log(pagerduty_incident_ref_url, 'hello', body, response.statusCode);
                 var alerts = JSON.parse(body)["alerts"];
                 var alert = alerts[0];
                 var alert_details = alert["body"]["details"];
@@ -173,7 +176,7 @@ function alertIncidentManager(incidentName, incidentSlackChannelID, incidentCrea
         },
         function (error, response, body) {
             if(error){
-                console.log(error);
+                console.error(error);
             }
             else{
                 console.log("Opsgenie incident started!");

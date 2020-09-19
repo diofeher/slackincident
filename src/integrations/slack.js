@@ -279,10 +279,24 @@ const getBotInfo = async (bot) => {
     return JSON.parse(response).bot;
 }
 
+const getMembersChannel = async (channel) => {
+    const response = await rp.post({
+        url: 'https://slack.com/api/conversations.members',
+        auth: {
+            'bearer': process.env.SLACK_API_TOKEN
+        },
+        form: {
+            channel,
+        }
+    });
+    return JSON.parse(response).members;
+}
+
 
 module.exports = {
     getProfileInfo,
     getBotInfo,
+    getMembersChannel,
     getChannelInfo,
     sendEpicToChannel,
     createInitialMessage,

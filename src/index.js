@@ -16,7 +16,12 @@ const googleapi = require('./integrations/googleapi.js');
 
 
 const CONSTANTS = {
-    BREAK_GLASS_OFFTIME: 30,  // minutes
+    BREAK_GLASS_OFFTIME: 30 * 60,  // minutes
+}
+
+const COLORS = {
+    RED: '#FF0000',
+    GREEN: '#008000',
 }
 
 
@@ -141,8 +146,10 @@ const onIncidentManagerResolved = async (message) => {
 
     const details = await pagerduty.getIncidentDetails(message.incident.id);
     var slackMessage = {
-        text: `Controlled burning. Incident Resolved.`,
         icon_emoji: ':sweat_drops:',
+        attachments: [
+            {color: COLORS.GREEN, text: `Controlled burning. Incident Resolved.`}
+        ],
     };
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
@@ -154,25 +161,31 @@ const onBreakGlass = async (body) => {
     const currentTime = new Date();
     const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
     const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
-    const delta = (currentTime - incidentCreatedTime) / 1000 / 60;
+    const delta = (currentTime - incidentCreatedTime);
 
-    if (delta > CONSTANTS.BREAK_GLASS_OFFTIME) {
+    if (delta / 1000 > CONSTANTS.BREAK_GLASS_OFFTIME) {
         var slackMessage = {
-            text: `${username} cannot break the glass anymore. Time has passed.`,
             icon_emoji: ':x:',
+            attachments: [{
+                text: `${username} cannot break the glass anymore. Time has passed.`,
+                color: COLORS.RED,
+            }],
         };
-        slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
+        slack.sendSlackMessageToChannel(channelId, slackMessage);
         return;
     }
 
     const botProfileInfo = await slack.getProfileInfo();
-    const userProfileInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
+    const botUserInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
     const chanInfo = await slack.getChannelInfo(channelId);
 
-    if (userProfileInfo.user_id != chanInfo?.creator) {
+    if (botUserInfo.user_id != chanInfo?.creator) {
         var slackMessage = {
-            text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
-            icon_emoji: ':alert:',
+            icon_emoji: ':x:',
+            attachments: [{
+                color: COLORS.RED,
+                text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
+            }]
         };
         slack.sendSlackMessageToChannel(body.user_id, slackMessage);
         return;
@@ -182,10 +195,14 @@ const onBreakGlass = async (body) => {
     var slackMessage = {
         text: `${username} broke the glass. With great power comes great responsibility.`,
         icon_emoji: ':fire_engine:',
+        channel: '',
+        attachments: [],
+        link_names: true,
+        parse: 'full',
     };
     slack.sendSlackMessageToChannel(channelId, slackMessage);
-    // TODO: Better email handling
-    googleapi.addUserToGroup(process.env.GSUITE_GROUP_KEY, username+'@messagebird.com');
+    const userInfo = await slack.getProfileInfo(body.user_id);
+    googleapi.addUserToGroup(process.env.GSUITE_GROUP_KEY, userInfo.email);
 }
 
 

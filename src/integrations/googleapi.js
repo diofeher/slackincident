@@ -3,7 +3,7 @@ const moment = require('moment');
 
 function getoAuth2Client(){
   if(!process.env.GOOGLEAPI_CLIENT_ID || !process.env.GOOGLEAPI_CLIENT_SECRET || !process.env.GOOGLE_AUTHORIZATION_TOKEN){
-    console.log('GOOGLEAPI_CLIENT_ID, GOOGLE_AUTHORIZATION_TOKEN or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
+    console.error('GOOGLEAPI_CLIENT_ID, GOOGLE_AUTHORIZATION_TOKEN or GOOGLEAPI_CLIENT_SECRET not provided. Calendar/Conference details wont be provided');
     return;
   }
   var client_secret = process.env.GOOGLEAPI_CLIENT_SECRET;
@@ -237,7 +237,7 @@ function createEvent(auth, incidentName, incidentId, incidentDescription, onSucc
 
 
 const addUserToGroup = async (groupKey, userEmail) => {
-  console.log('Adding ' + userEmail + ' to firefighters group.');
+  console.debug(`Adding ${userEmail} to firefighters group.`);
   const auth = getoAuth2Client();
   const groupsAPI = await google.admin('directory_v1');
 
@@ -266,7 +266,7 @@ const getGroupMembers = async (groupKey) => {
 
 
 const removeUserFromGroup = async (groupKey, memberKey) => {
-  console.log(groupKey, memberKey);
+  console.debug(`[-] Removed ${memberKey} from ${groupKey}`);
   const auth = getoAuth2Client();
   const groupsAPI = await google.admin('directory_v1');
 
