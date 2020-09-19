@@ -15,6 +15,11 @@ const jira = require('./integrations/jira');
 const googleapi = require('./integrations/googleapi.js');
 
 
+const CONSTANTS = {
+    BREAK_GLASS_OFFTIME: 30,  // minutes
+}
+
+
 function sendIncidentLogFileToChannel(incidentSlackChannelId, docUrl) {
     var slackMessage = {
         username: 'During the incident',
@@ -142,15 +147,43 @@ const onIncidentManagerResolved = async (message) => {
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
 
-const onBreakGlass = (body) => {
-    const incidentSlackChannelId = body.channel_id;
+const onBreakGlass = async (body) => {
+    const channelId = body.channel_id;
     const username = body.user_name;
+
+    const currentTime = new Date();
+    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
+    const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
+    const delta = (currentTime - incidentCreatedTime) / 1000 / 60;
+
+    if (delta > CONSTANTS.BREAK_GLASS_OFFTIME) {
+        var slackMessage = {
+            text: `${username} cannot break the glass anymore. Time has passed.`,
+            icon_emoji: ':x:',
+        };
+        slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
+        return;
+    }
+
+    const botProfileInfo = await slack.getProfileInfo();
+    const userProfileInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
+    const chanInfo = await slack.getChannelInfo(channelId);
+
+    if (userProfileInfo.user_id != chanInfo?.creator) {
+        var slackMessage = {
+            text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
+            icon_emoji: ':alert:',
+        };
+        slack.sendSlackMessageToChannel(body.user_id, slackMessage);
+        return;
+    }
+
 
     var slackMessage = {
         text: `${username} broke the glass. With great power comes great responsibility.`,
         icon_emoji: ':fire_engine:',
     };
-    slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
+    slack.sendSlackMessageToChannel(channelId, slackMessage);
     // TODO: Better email handling
     googleapi.addUserToGroup(process.env.GSUITE_GROUP_KEY, username+'@messagebird.com');
 }

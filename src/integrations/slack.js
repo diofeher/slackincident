@@ -70,7 +70,6 @@ function sendSlackMessageToChannel(slackChannel, slackMessage, pin_message) {
             json: newMessage
         },
         function (error, response, body) {
-            console.log(error, response.statusCode, body);
             if (error) {
                 console.error('Sending message to Slack channel failed:', error);
                 throw new Error('Sending message to Slack channel failed');
@@ -241,8 +240,50 @@ function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails
     slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage, true);
 }
 
+const getChannelInfo = async (channel) => {
+    const response =  await rp.post({
+        url: 'https://slack.com/api/conversations.info',
+        auth: {
+            'bearer': process.env.SLACK_API_TOKEN
+        },
+        form: {
+            channel,
+        }
+    })
+    return JSON.parse(response).channel;
+}
+
+const getProfileInfo = async (user) => {
+    const response = await rp.post({
+        url: 'https://slack.com/api/users.profile.get',
+        auth: {
+            'bearer': process.env.SLACK_API_TOKEN
+        },
+        form: {
+            user,
+        }
+    })
+    return JSON.parse(response).profile;
+}
+
+const getBotInfo = async (bot) => {
+    const response = await rp.post({
+        url: 'https://slack.com/api/bots.info',
+        auth: {
+            'bearer': process.env.SLACK_API_TOKEN
+        },
+        form: {
+            bot,
+        }
+    });
+    return JSON.parse(response).bot;
+}
+
 
 module.exports = {
+    getProfileInfo,
+    getBotInfo,
+    getChannelInfo,
     sendEpicToChannel,
     createInitialMessage,
     sendConferenceCallDetailsToChannel,

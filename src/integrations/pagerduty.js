@@ -3,6 +3,46 @@ const slack = require('./slack');
 const googleapi = require('./googleapi');
 const rp = require('request-promise');
 
+
+class NotFound extends Error {
+    constructor(message, cause) {
+      super(message);
+      this.cause = cause;
+      this.name = 'NotFound';
+    }
+  }
+
+
+const getActiveIncidents = async () => {
+    const response = await rp.get({
+        url: 'https://api.pagerduty.com/incidents?statuses[]=triggered&total=true',
+        headers: {
+            'Authorization': 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY
+        },
+    });
+    return JSON.parse(response);
+}
+
+const getIncidentBySlackChannel = async (slackChannelID) => {
+    const activeIncidents = await getActiveIncidents();
+    const filteredIncidents = await Promise.all(
+        (activeIncidents.incidents || []).filter(async (incident) => {
+            const details = await getIncidentDetails(incident.id);
+            return slackChannelID == details.slack_channel;
+        })
+    );
+
+    if(filteredIncidents.length > 0) {
+        return filteredIncidents[0];
+    } else {
+        throw new NotFound();
+    }
+}
+
+const getTotalActiveIncidents = async () => {
+    return await getActiveIncidents().total;
+}
+
 const getIncidentDetails = async (incidentID) => {
     var headers = {
         'Authorization': 'Token token='+ process.env.PAGERDUTY_READ_ONLY_API_KEY
@@ -142,18 +182,9 @@ function alertIncidentManager(incidentName, incidentSlackChannelID, incidentCrea
     }
 }
 
-const getTotalActiveIncidents = async () => {
-    const response = await rp.get({
-        url: 'https://api.pagerduty.com/incidents?statuses[]=resolved&total=true',
-        headers: {
-            'Authorization': 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY
-        },
-    });
-    const jsonResponse = JSON.parse(response);
-    return jsonResponse?.data?.total;
-}
 
 module.exports = {
+    getIncidentBySlackChannel,
     getIncidentDetails,
     getTotalActiveIncidents,
     getIncidentManagerEmail,
