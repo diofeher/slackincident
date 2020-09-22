@@ -36,10 +36,10 @@ const removeInactiveIncidentMembers = async (channelID) => {
 
     const activeMembers = await slack.getMembersChannel(channelID);
 
-    activeMembers.map(async (member) => {
+    (activeMembers || []).map(async (member) => {
         if(!membersActiveIncidents.includes(member)) {
             const email = (await slack.getProfileInfo(member)).email;
-            googleapi.removeUserFromGroup(process.env.GSUITE_GROUP_KEY, email);
+            email && googleapi.removeUserFromGroup(email);
         };
     });
 }
@@ -107,24 +107,23 @@ async function createIncidentFlow(body) {
 }
 
 
-function createAdditionalResources(incidentId, incidentName, incidentSlackChannelId, incidentSlackChannel, incidentCreatorSlackHandle) {
-    gapi.registerIncidentEvent(incidentId,
+const createAdditionalResources = async (incidentId, incidentName, incidentSlackChannelId, incidentSlackChannel, incidentCreatorSlackHandle) => {
+    const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(incidentId,
         incidentName,
         incidentCreatorSlackHandle,
         incidentSlackChannel,
-        function (eventDetails) {
-            slack.sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails);
-        });
+    );
+
+    slack.sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails);
 
     var fileName = incidentSlackChannel;
-    gapi.createIncidentsLogFile(fileName,
+    const url = await gapi.createIncidentsLogFile(fileName,
         process.env.GDRIVE_INCIDENT_NOTES_FOLDER,
         incidentName,
         incidentCreatorSlackHandle,
-        function (url) {
-            sendIncidentLogFileToChannel(incidentSlackChannelId, url);
-        }
     );
+
+    sendIncidentLogFileToChannel(incidentSlackChannelId, url);
 
     jira.createFollowupsEpic(incidentName, incidentSlackChannelId, incidentSlackChannel);
 
@@ -149,19 +148,16 @@ const onIncidentAcknowledgement = (message) => {
 }
 
 const onIncidentManagerResolved = async (message) => {
-    const groupKey = process.env.GSUITE_GROUP_KEY;
     const details = await pagerduty.getIncidentDetails(message.incident.id);
     const imEmail = await pagerduty.onIncidentManagerResolved(message);
     const totalActiveEvents = await pagerduty.getTotalActiveIncidents();
 
     if(totalActiveEvents > 0) {
+        console.debug('Other incidents workflow...');
         removeInactiveIncidentMembers(details.slack_channel);
     } else {
-        const members = await googleapi.getGroupMembers(groupKey);
-        if(members.includes(imEmail)) {
-            googleapi.removeUserFromGroup(groupKey, imEmail);
-        }
-        googleapi.clearGroupMembers(groupKey);
+        console.debug('Zero active incidents workflow...');
+        googleapi.clearGroupMembers();
     }
 
     var slackMessage = {
@@ -220,7 +216,7 @@ const onBreakGlass = async (body) => {
     };
     slack.sendSlackMessageToChannel(channelId, slackMessage);
     const userInfo = await slack.getProfileInfo(body.user_id);
-    googleapi.addUserToGroup(process.env.GSUITE_GROUP_KEY, userInfo.email);
+    googleapi.addUserToGroup(userInfo.email);
 }
 
 
@@ -234,24 +230,26 @@ http.createServer(function (req, res) {
             body += chunk;
         });
 
-        if(req.url == "/break-glass") {
+        if(req.url.includes("/break-glass")) {
             req.on('end', async function () {
                 post = qs.parse(body);
                 onBreakGlass(post);
                 res.end();
             });
         }
-        else if(req.url == "/pagerduty"){
+        else if(req.url.includes("/pagerduty")){
             req.on('end', async function () {
-                console.log('sucessfully received pagerduty webhook from pagerduty');
+                console.debug('sucessfully received pagerduty webhook from pagerduty');
                 post = JSON.parse(body);
                 if(post.messages){
                     for (var i = 0; i < post.messages.length; i++) {
                         var message = post.messages[i];
                         // console.log(message);
                         if(message['event'] == 'incident.acknowledge'){
+                            console.debug('incident acknowledgement.');
                             onIncidentAcknowledgement(message);
                         } else if(message['event'] == 'incident.resolve') {
+                            console.debug('incident resolved.');
                             onIncidentManagerResolved(message);
                         }
                     }

@@ -57,7 +57,7 @@ function askClientSecret(){
 function authorize() {
 
   if(!CLIENT_ID || !CLIENT_SECRET){
-    console.log("\n\nPlease provide the client id and secret of your crdentials otherwise token cannot be generated.\nBye.\n");
+    console.log("\n\nPlease provide the client id and secret of your credentials otherwise token cannot be generated.\nBye.\n");
     return;
   }
   //const {client_secret, client_id, redirect_uris} = credentials.installed;

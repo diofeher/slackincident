@@ -176,7 +176,7 @@ function sendEpicToChannel(incidentSlackChannelId, epicUrl) {
 }
 
 function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails) {
-    var entryPoints = eventDetails.data.conferenceData.entryPoints;
+    var entryPoints = eventDetails.conferenceData.entryPoints;
     var title_link;
     var text;
     var more_phones_link;
@@ -236,7 +236,7 @@ function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails
         mrkdwn: true,
     };
     slackMessage.attachments.push(confDetailsMessage);
-    slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage, true);
+    sendSlackMessageToChannel(incidentSlackChannelId, slackMessage, true);
 }
 
 const getChannelInfo = async (channel) => {
