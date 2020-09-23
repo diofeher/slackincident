@@ -71,7 +71,6 @@ function createInitialMessage(incidentName, slackUserName, incidentSlackChannel,
 
 
 const sendSlackMessageToChannel = async (channel, slackMessage, pin_message) => {
-    console.debug(`sendSlackMessageToChannel: ${slackMessage.attachments[0]?.text} to ${channel}`);
     if (process.env.DRY_RUN) {
         console.log("Sending message below to channel " + channel);
         console.log(slackMessage);
