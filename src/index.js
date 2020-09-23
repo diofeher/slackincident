@@ -26,7 +26,7 @@ const COLORS = {
 }
 
 const removeInactiveIncidentMembers = async (channelID) => {
-    const activeIncidents = (await pagerduty.getActiveIncidents())?.incidents;
+    const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
 
     var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
         const details = await pagerduty.getIncidentDetails(incident.id);
