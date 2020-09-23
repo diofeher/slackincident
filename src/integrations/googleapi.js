@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const gSuiteClient = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: process.env.GSUITE_SERVICE_URL,
   headers: {
   //   Authorization: "Bearer EXAMPLE_CODE"
     "Content-Type": "application/json"
