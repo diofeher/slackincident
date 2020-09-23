@@ -11,6 +11,16 @@ const slackClient = axios.create({
     "Content-Type": "application/json",
 });
 
+slackClient.interceptors.response.use(function (response) {
+    const { data, path } = response;
+    if(!data.ok) {
+        console.error(path, data);
+    }
+    return response;
+  }, function (error) {
+    return Promise.reject(error);
+  });
+
 
 function sendIncidentManagerJoiningSoonMessageToChannel(incidentSlackChannelId, incidentManager) {
     var emoji = Math.random() < 0.5 ? ':male-firefighter:' : ':female-firefighter:';
@@ -62,7 +72,7 @@ function createInitialMessage(incidentName, slackUserName, incidentSlackChannel,
 
 
 const sendSlackMessageToChannel = async (channel, slackMessage, pin_message) => {
-    console.debug(`sendSlackMessageToChannel to ${channel}`);
+    console.debug(`sendSlackMessageToChannel: ${slackMessage.attachments[0]?.text} to ${channel}`);
     if (process.env.DRY_RUN) {
         console.log("Sending message below to channel " + channel);
         console.log(slackMessage);
@@ -74,17 +84,11 @@ const sendSlackMessageToChannel = async (channel, slackMessage, pin_message) => 
     };
 
     const { data } = await slackClient.post('/chat.postMessage', newMessage);
-    if(!data.ok) {
-        console.error("sendSlackMessageToChannel:postMessage", data);
-    }
 
     if (pin_message) {
         var ts = data['ts'];
         var channel = data['channel'];
         const { data: pinData } = await slackClient.post('/pins.add', { channel, timestamp: ts });
-        if(!pinData.ok) {
-            console.error("sendSlackMessageToChannel:pin_message", pinData);
-        }
     }
 }
 
@@ -198,13 +202,13 @@ function sendConferenceCallDetailsToChannel(channelId, eventDetails) {
 }
 
 const getChannelInfo = async (channel) => {
-    const response = await slackClient.post('/conversations.info', { channel });
-    return response.data;
+    const { data } = await slackClient.post('/conversations.info', { channel });
+    return data;
 }
 
 const getProfileInfo = async (user) => {
-    const response = await slackClient.post('/users.profile.get', { user });
-    return response.data.profile;
+    const { data } = await slackClient.get('/users.profile.get', { params: { user }});
+    return data.profile;
 }
 
 const getBotInfo = async (bot) => {

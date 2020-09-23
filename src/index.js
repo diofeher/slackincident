@@ -32,13 +32,13 @@ const removeInactiveIncidentMembers = async (channelID) => {
         const members = await slack.getMembersChannel(details.slack_channel);
         return members || [];
     }));
-    const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
 
+    const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
     const activeMembers = await slack.getMembersChannel(channelID);
 
     (activeMembers || []).map(async (member) => {
         if(!membersActiveIncidents.includes(member)) {
-            const email = (await slack.getProfileInfo(member)).email;
+            const { email } = await slack.getProfileInfo(member);
             email && googleapi.removeUserFromGroup(email);
         };
     });
@@ -191,6 +191,7 @@ const onBreakGlass = async (body) => {
     const botUserInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
     const chanInfo = await slack.getChannelInfo(channelId);
 
+    console.log(botUserInfo.user_id, chanInfo?.creator);
     if (botUserInfo.user_id != chanInfo?.creator) {
         var slackMessage = {
             icon_emoji: ':x:',
