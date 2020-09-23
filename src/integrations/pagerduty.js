@@ -30,12 +30,12 @@ const asyncFilter = async (arr, predicate) => {
     return arr.filter((_v, index) => results[index]);
 };
 
-const getIncidentBySlackChannel = async (slackChannelID) => {
+const getIncidentBySlackChannel = async (channelId) => {
     const activeIncidents = (await getActiveIncidents())?.incidents || [];
 
     const filteredIncidents = await asyncFilter(activeIncidents, async (incident) => {
         const details = await getIncidentDetails(incident.id);
-        return slackChannelID == details.slack_channel;
+        return channelId == details.slack_channel;
     });
 
     if(filteredIncidents.length > 0) {

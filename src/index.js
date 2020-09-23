@@ -189,10 +189,9 @@ const onBreakGlass = async (body) => {
 
     const botProfileInfo = await slack.getProfileInfo();
     const botUserInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
-    const chanInfo = await slack.getChannelInfo(channelId);
+    const { channel } = await slack.getChannelInfo(channelId);
 
-    console.log(botUserInfo.user_id, chanInfo?.creator);
-    if (botUserInfo.user_id != chanInfo?.creator) {
+    if (botUserInfo.user_id != channel?.creator) {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
@@ -204,7 +203,6 @@ const onBreakGlass = async (body) => {
         return;
     }
 
-
     var slackMessage = {
         icon_emoji: ':fire_engine:',
         attachments: [{
@@ -212,6 +210,7 @@ const onBreakGlass = async (body) => {
             color: COLORS.RED,
         }],
     };
+
     slack.sendSlackMessageToChannel(channelId, slackMessage);
     const userInfo = await slack.getProfileInfo(body.user_id);
     googleapi.addUserToGroup(userInfo.email, false);

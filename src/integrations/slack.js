@@ -1,5 +1,3 @@
-var rp = require('request-promise');
-const request = require('request');
 const axios = require('axios');
 
 
@@ -202,7 +200,8 @@ function sendConferenceCallDetailsToChannel(channelId, eventDetails) {
 }
 
 const getChannelInfo = async (channel) => {
-    const { data } = await slackClient.post('/conversations.info', { channel });
+    const params = { channel };
+    const { data } = await slackClient.get('/conversations.info', { params });
     return data;
 }
 
@@ -212,29 +211,13 @@ const getProfileInfo = async (user) => {
 }
 
 const getBotInfo = async (bot) => {
-    const response = await rp.post({
-        url: 'https://slack.com/api/bots.info',
-        auth: {
-            'bearer': process.env.SLACK_API_TOKEN
-        },
-        form: {
-            bot,
-        }
-    });
-    return JSON.parse(response).bot;
+    const { data } = await slackClient.get('/bots.info', { params: { bot }});
+    return data.bot;
 }
 
 const getMembersChannel = async (channel) => {
-    const response = await rp.post({
-        url: 'https://slack.com/api/conversations.members',
-        auth: {
-            'bearer': process.env.SLACK_API_TOKEN
-        },
-        form: {
-            channel,
-        }
-    });
-    return JSON.parse(response).members;
+    const { data } = await slackClient.post('/conversations.members', { channel });
+    return data.members;
 }
 
 
