@@ -198,11 +198,11 @@ const onBreakGlass = async (body) => {
         return;
     }
 
-    const botProfileInfo = await slack.getProfileInfo();
-    const botUserInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
+    const { bot_id } = await slack.getProfileInfo();
+    const botUserInfo = await slack.getBotInfo(bot_id);
     const { channel } = await slack.getChannelInfo(channel_id);
 
-    if (botUserInfo.user_id != channel?.creator) {
+    if (botUserInfo.user_id != channel.creator) {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
