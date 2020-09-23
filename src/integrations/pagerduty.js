@@ -99,8 +99,8 @@ const onIncidentManagerAcknowledge = async (message) => {
 
 
 const getIncidentManagerEmail = async (userURL) => {
-    const { data } = await pagerDutyClient.get(userURL);
-    return data.user?.email;
+    const { data: { user } } = await pagerDutyClient.get(userURL);
+    return user.email;
 }
 
 
