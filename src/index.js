@@ -252,7 +252,6 @@ http.createServer(function (req, res) {
                 if(post.messages){
                     for (var i = 0; i < post.messages.length; i++) {
                         var message = post.messages[i];
-                        // console.log(message);
                         if(message['event'] == 'incident.acknowledge'){
                             console.debug('incident acknowledgement.');
                             pagerduty.onIncidentManagerAcknowledge(message);

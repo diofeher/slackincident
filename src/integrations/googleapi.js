@@ -6,7 +6,19 @@ const gSuiteClient = axios.create({
   //   Authorization: "Bearer EXAMPLE_CODE"
     "Content-Type": "application/json"
   }
-})
+});
+
+gSuiteClient.interceptors.response.use(function (response) {
+  const { data, config: { url, method }} = response;
+
+  if(!data.ok) {
+      console.error(url, method, data);
+  }
+  return response;
+}, function (error) {
+  return Promise.reject(error);
+});
+
 
 const createIncidentsLogFile = async (fileName, folder, incidentTitle, reportedBy) => {
   return await gSuiteClient.post(`/incidents/log`, {
