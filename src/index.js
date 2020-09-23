@@ -17,6 +17,7 @@ const googleapi = require('./integrations/googleapi.js');
 
 const CONSTANTS = {
     BREAK_GLASS_OFFTIME: 30 * 60,  // minutes
+    BREAK_GLASS_MINIMUM_LEN_DESCRIPTION: 10,
 }
 
 const COLORS = {
@@ -167,11 +168,21 @@ const onIncidentManagerResolved = async (message) => {
 }
 
 const onBreakGlass = async (body) => {
-    const channelId = body.channel_id;
-    const username = body.user_name;
+    const { text, channel_id, user_name, user_id } = body;
+    if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
+        var slackMessage = {
+            icon_emoji: ':x:',
+            attachments: [{
+                color: COLORS.RED,
+                text: `You need to specify a description when using /break-glass. Use like: /break-glass I want superpowers!`,
+            }]
+        };
+        slack.sendSlackMessageToChannel(user_id, slackMessage);
+        return;
+    }
 
     const currentTime = new Date();
-    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
+    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channel_id);
     const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
     const delta = (currentTime - incidentCreatedTime);
 
@@ -179,17 +190,17 @@ const onBreakGlass = async (body) => {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
-                text: `${username} cannot break the glass anymore. Time has passed.`,
+                text: `${user_name} cannot break the glass anymore. Time has passed.`,
                 color: COLORS.RED,
             }],
         };
-        slack.sendSlackMessageToChannel(channelId, slackMessage);
+        slack.sendSlackMessageToChannel(channel_id, slackMessage);
         return;
     }
 
     const botProfileInfo = await slack.getProfileInfo();
     const botUserInfo = await slack.getBotInfo(botProfileInfo?.bot_id);
-    const { channel } = await slack.getChannelInfo(channelId);
+    const { channel } = await slack.getChannelInfo(channel_id);
 
     if (botUserInfo.user_id != channel?.creator) {
         var slackMessage = {
@@ -199,20 +210,20 @@ const onBreakGlass = async (body) => {
                 text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
             }]
         };
-        slack.sendSlackMessageToChannel(body.user_id, slackMessage);
+        slack.sendSlackMessageToChannel(user_id, slackMessage);
         return;
     }
 
     var slackMessage = {
         icon_emoji: ':fire_engine:',
         attachments: [{
-            text: `${username} broke the glass. With great power comes great responsibility.`,
+            text: `${user_name} broke the glass: "${text}"`,
             color: COLORS.RED,
         }],
     };
 
-    slack.sendSlackMessageToChannel(channelId, slackMessage);
-    const userInfo = await slack.getProfileInfo(body.user_id);
+    slack.sendSlackMessageToChannel(channel_id, slackMessage);
+    const userInfo = await slack.getProfileInfo(user_id);
     googleapi.addUserToGroup(userInfo.email, false);
 }
 

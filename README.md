@@ -53,3 +53,6 @@ The supported authentication method is OAuth 2.0. The details below are generate
 
 ## Slack integration
 1. Bot needs to be invited by mentioning @bot-name at the SLACK_INCIDENTS_CHANNEL channels.
+
+## Google APIS integration
+1. Create a GSuite Service account https://support.google.com/a/answer/7378726?hl=en

@@ -10,9 +10,10 @@ const slackClient = axios.create({
 });
 
 slackClient.interceptors.response.use(function (response) {
-    const { data, path } = response;
+    const { data, config: { url, method }} = response;
+
     if(!data.ok) {
-        console.error(path, data);
+        console.error(url, method, data);
     }
     return response;
   }, function (error) {
