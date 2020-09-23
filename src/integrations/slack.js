@@ -1,5 +1,15 @@
 var rp = require('request-promise');
 const request = require('request');
+const axios = require('axios');
+
+
+const slackClient = axios.create({
+    baseURL: "https://slack.com/api/",
+    headers: {
+        Authorization: `Bearer ${process.env.SLACK_API_TOKEN}`
+    },
+    "Content-Type": "application/json",
+});
 
 
 function sendIncidentManagerJoiningSoonMessageToChannel(incidentSlackChannelId, incidentManager) {
@@ -38,12 +48,12 @@ function createInitialMessage(incidentName, slackUserName, incidentSlackChannel,
         text: "Incident Channel: #" + incidentSlackChannel,
         "fallback": "Join Incident Channel #" + incidentSlackChannel,
         "actions": [
-            {
-                "type": "button",
-                "text": "Join Incident Channel",
-                "url": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelId,
-                "style": "danger"
-            }
+            // {
+            //     "type": "button",
+            //     "text": "Join Incident Channel",
+            //     "url": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelId,
+            //     "style": "danger"
+            // }
         ],
         footer: `reported by @${slackUserName}`
     });
@@ -51,107 +61,56 @@ function createInitialMessage(incidentName, slackUserName, incidentSlackChannel,
 }
 
 
-function sendSlackMessageToChannel(slackChannel, slackMessage, pin_message) {
+const sendSlackMessageToChannel = async (channel, slackMessage, pin_message) => {
+    console.debug(`sendSlackMessageToChannel to ${channel}`);
     if (process.env.DRY_RUN) {
-        console.log("Sending message below to channel " + slackChannel);
+        console.log("Sending message below to channel " + channel);
         console.log(slackMessage);
         return;
     }
     const newMessage = {
         ...slackMessage,
-        channel: slackChannel
+        channel,
     };
 
-    request.post({
-            url: 'https://slack.com/api/chat.postMessage',
-            auth: {
-                'bearer': process.env.SLACK_API_TOKEN
-            },
-            json: newMessage
-        },
-        function (error, response, body) {
-            if (error) {
-                console.error('Sending message to Slack channel failed:', error);
-                throw new Error('Sending message to Slack channel failed');
-            }
-            if (pin_message) {
-                var ts = body['ts'];
-                var channel = body['channel'];
-                request.post({
-                        url: 'https://slack.com/api/pins.add',
-                        auth: {
-                            'bearer': process.env.SLACK_API_TOKEN
-                        },
-                        json: {
-                            'channel': channel,
-                            'timestamp': ts
-                        }
-                    }, (error, response) => {
-                        if (error) {
-                            console.log('Error pinning message to channel: ' + error);
-                        }
-                    }
-                );
-            }
-        });
-}
+    const { data } = await slackClient.post('/chat.postMessage', newMessage);
+    if(!data.ok) {
+        console.error("sendSlackMessageToChannel:postMessage", data);
+    }
 
-function setChannelTopic(channelId, topic) {
-    request.post({
-            url: 'https://slack.com/api/conversations.setTopic',
-            auth: {
-                'bearer': process.env.SLACK_API_TOKEN
-            },
-            json: {
-                'channel': channelId,
-                'topic': topic
-            }
-        },
-        function (error, response, body) {
-            if (error || !body['ok']) {
-                console.log('Error setting topic for channel ' + channelId);
-                console.log(body, error);
-            }
-        });
-}
-
-async function createSlackChannel(incidentName, incidentCreatorSlackUserId, incidentSlackChannel) {
-    const res = await rp.post({
-        url: 'https://slack.com/api/conversations.create',
-        auth: {
-            'bearer': process.env.SLACK_API_TOKEN
-        },
-        json: {
-            name: incidentSlackChannel
-            // is_private:
+    if (pin_message) {
+        var ts = data['ts'];
+        var channel = data['channel'];
+        const { data: pinData } = await slackClient.post('/pins.add', { channel, timestamp: ts });
+        if(!pinData.ok) {
+            console.error("sendSlackMessageToChannel:pin_message", pinData);
         }
+    }
+}
+
+const setChannelTopic = async (channel, topic) => {
+    return await slackClient.post('/conversations.setTopic', { channel, topic });
+}
+
+const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slackChannel) => {
+    const { data } = await slackClient.post('/conversations.create', {
+        name: slackChannel
+        // is_private:
     });
 
-    let channelId = res.channel.id;
+    let channelId = data.channel.id;
 
     setChannelTopic(channelId, incidentName + '. Please join conference call. See pinned message for details.');
     inviteUser(channelId, incidentCreatorSlackUserId);
-    return res.channel.id;
+    return channelId;
 }
 
 
-function inviteUser(channelId, userId) {
-    request.post({
-            url: 'https://slack.com/api/conversations.invite',
-            auth: {
-                'bearer': process.env.SLACK_API_TOKEN
-            },
-            json: {
-                'channel': channelId,
-                'users': [userId]
-            }
-        },
-        function (error, response, body) {
-            if (error || !body['ok']) {
-                console.log('Error inviting user for channel');
-                console.log(body, error);
-            }
-        });
+const inviteUser = async (channel, userId) => {
+    await slackClient.post('/conversations.invite', {
+        channel,
+        users: [userId]
+    });
 }
 
 
@@ -175,10 +134,9 @@ function sendEpicToChannel(incidentSlackChannelId, epicUrl) {
     sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
 }
 
-function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails) {
+function sendConferenceCallDetailsToChannel(channelId, eventDetails) {
     var entryPoints = eventDetails.conferenceData.entryPoints;
     var title_link;
-    var text;
     var more_phones_link;
     var tel;
     var tel_link;
@@ -203,18 +161,18 @@ function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails
     }
 
     var confDetailsMessage = {
-        "color": "#1F8456",
-        "title": "Join Conference Call",
+        color: "#1F8456",
+        title: "Join Conference Call",
         "title_link": title_link,
-        "text": title_link,
-        "fields": [
+        text: title_link,
+        fields: [
             {
                 "title": "Join by phone",
                 "value": "<" + tel_link + ",," + pin + "%23" + "|" + tel + " PIN: " + pin + "#>",
                 "short": false
             }
         ],
-        "actions": [
+        actions: [
             {
                 "type": "button",
                 "text": "Join Conference Call",
@@ -236,33 +194,17 @@ function sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails
         mrkdwn: true,
     };
     slackMessage.attachments.push(confDetailsMessage);
-    sendSlackMessageToChannel(incidentSlackChannelId, slackMessage, true);
+    sendSlackMessageToChannel(channelId, slackMessage, true);
 }
 
 const getChannelInfo = async (channel) => {
-    const response =  await rp.post({
-        url: 'https://slack.com/api/conversations.info',
-        auth: {
-            'bearer': process.env.SLACK_API_TOKEN
-        },
-        form: {
-            channel,
-        }
-    })
-    return JSON.parse(response).channel;
+    const response = await slackClient.post('/conversations.info', { channel });
+    return response.data;
 }
 
 const getProfileInfo = async (user) => {
-    const response = await rp.post({
-        url: 'https://slack.com/api/users.profile.get',
-        auth: {
-            'bearer': process.env.SLACK_API_TOKEN
-        },
-        form: {
-            user,
-        }
-    })
-    return JSON.parse(response).profile;
+    const response = await slackClient.post('/users.profile.get', { user });
+    return response.data.profile;
 }
 
 const getBotInfo = async (bot) => {

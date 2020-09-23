@@ -1,7 +1,6 @@
-const request = require('request');
 const slack = require('./slack');
+const axios = require('axios');
 const googleapi = require('./googleapi');
-const rp = require('request-promise');
 
 
 class NotFound extends Error {
@@ -10,17 +9,20 @@ class NotFound extends Error {
       this.cause = cause;
       this.name = 'NotFound';
     }
-  }
+}
+
+const pagerDutyClient = axios.create({
+    baseURL: "https://api.pagerduty.com",
+    headers: {
+        Authorization: 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY,
+        "Content-Type": "application/json"
+    }
+  })
 
 
 const getActiveIncidents = async () => {
-    const response = await rp.get({
-        url: 'https://api.pagerduty.com/incidents?statuses[]=triggered&statuses[]=acknowledged&total=true',
-        headers: {
-            'Authorization': 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY
-        },
-    });
-    return JSON.parse(response);
+    const { data } = await pagerDutyClient.get('/incidents?statuses[]=triggered&statuses[]=acknowledged&total=true');
+    return data;
 }
 
 const asyncFilter = async (arr, predicate) => {
@@ -48,16 +50,9 @@ const getTotalActiveIncidents = async () => {
 }
 
 const getIncidentDetails = async (incidentID) => {
-    var headers = {
-        'Authorization': 'Token token='+ process.env.PAGERDUTY_READ_ONLY_API_KEY
-    };
+    const { data } = await pagerDutyClient.get(`/incidents/${incidentID}/alerts`);
 
-    const response = await rp.get({
-        url: `https://api.pagerduty.com/incidents/${incidentID}/alerts`,
-        headers,
-    });
-
-    var alerts = JSON.parse(response)["alerts"];
+    var alerts = data.alerts;
     var alert = alerts[0];
     return alert["body"]["details"];
 }
@@ -88,100 +83,69 @@ const onIncidentManagerAcknowledge = async (message) => {
         var incident = log_entry["incident"];
         var pagerduty_incident_ref_url = incident["self"];
 
-        var auth_header = {
-            'Authorization': 'Token token='+ process.env.PAGERDUTY_READ_ONLY_API_KEY
-        };
-
         //get alerts for the incident to get additional details for the incident
-        request.get({
-            url: pagerduty_incident_ref_url + "/alerts",
-            headers: auth_header
-        },
-        async function (error, response, body) {
-            if(error){
-                console.error(error);
-            }
-            else{
-                var alerts = JSON.parse(body)["alerts"];
-                var alert = alerts[0];
-                var alert_details = alert["body"]["details"];
-                var slack_channel = alert_details["slack_channel"];
-                if(slack_channel){
-                    slack.sendIncidentManagerJoiningSoonMessageToChannel(slack_channel, agent["summary"])
-                }
-                const imEmail = await getIncidentManagerEmail(pagerduty_user_ref_url);
-                googleapi.addUserToGroup(process.env.GSUITE_GROUP_KEY, imEmail);
-            }
-        })
+        const response = await pagerDutyClient.get(pagerduty_incident_ref_url + "/alerts");
+        var alerts = response.data["alerts"];
+        var alert = alerts[0];
+        var alert_details = alert["body"]["details"];
+        var slack_channel = alert_details["slack_channel"];
+        if(slack_channel){
+            slack.sendIncidentManagerJoiningSoonMessageToChannel(slack_channel, agent["summary"])
+        }
+        const imEmail = await getIncidentManagerEmail(pagerduty_user_ref_url);
+        googleapi.addUserToGroup(imEmail, true);
     }
 }
 
 
 const getIncidentManagerEmail = async (userURL) => {
-    const respUser = await rp.get({
-        url: userURL,
-        headers: {
-            'Authorization': 'Token token=' + process.env.PAGERDUTY_READ_ONLY_API_KEY
-        },
-    });
-    return JSON.parse(respUser).user.email;
+    const { data } = await pagerDutyClient.get(userURL);
+    return data.user?.email;
 }
 
 
-function alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle) {
+const alertIncidentManager = async (incidentName, incidentSlackChannelID, incidentCreatorSlackHandle) => {
     if(process.env.DRY_RUN){
         console.log('DRY_RUN: Creating incident!');
         return;
     }
     if(process.env.PAGERDUTY_API_TOKEN){
-        request.post({
-            url: "https://events.pagerduty.com/v2/enqueue",
-            json: {
-                "routing_key": process.env.PAGERDUTY_API_TOKEN,
-                "event_action": "trigger",
-                "payload": {
-                    "summary": "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
-                    "source": incidentSlackChannelID,
-                    "severity": "critical",
-                    "custom_details": {
-                        "slack_deep_link_url": "https://slack.com/app_redirect?team=" + process.env.SLACK_TEAM_ID + "&channel=" + incidentSlackChannelID,
-                        "slack_deep_link": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelID,
-                        "initiated_by": incidentCreatorSlackHandle,
-                        "slack_channel": incidentSlackChannelID
-                    }
-                },
-            }
-        })
-    }
-    if(process.env.OPSGENIE_API_KEY){
-        request.post({
-            url: process.env.OPSGENIE_URL + "/v1/incidents/create",
-            headers: {
-                'Authorization': 'GenieKey '+process.env.OPSGENIE_API_KEY
-            },
-            json: {
-                "message": incidentName,
-                "description": "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
-                "priority":"P1",
-                "responders":[
-                    {"id": process.env.OPSGENIE_INCIDENT_MANAGER_TEAM_ID ,"type":"team"}
-                ],
-                "details": {
+        axios.post("https://events.pagerduty.com/v2/enqueue", {
+            "routing_key": process.env.PAGERDUTY_API_TOKEN,
+            "event_action": "trigger",
+            "payload": {
+                summary: "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
+                source: incidentSlackChannelID,
+                severity: "critical",
+                "custom_details": {
                     "slack_deep_link_url": "https://slack.com/app_redirect?team=" + process.env.SLACK_TEAM_ID + "&channel=" + incidentSlackChannelID,
                     "slack_deep_link": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelID,
                     "initiated_by": incidentCreatorSlackHandle,
                     "slack_channel": incidentSlackChannelID
                 }
+            },
+        });
+    }
+    if(process.env.OPSGENIE_API_KEY){
+        await axios.post(`${process.env.OPSGENIE_URL}/v1/incidents/create`, {
+            "message": incidentName,
+            "description": "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
+            "priority":"P1",
+            "responders":[
+                {"id": process.env.OPSGENIE_INCIDENT_MANAGER_TEAM_ID ,"type":"team"}
+            ],
+            "details": {
+                "slack_deep_link_url": "https://slack.com/app_redirect?team=" + process.env.SLACK_TEAM_ID + "&channel=" + incidentSlackChannelID,
+                "slack_deep_link": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelID,
+                "initiated_by": incidentCreatorSlackHandle,
+                "slack_channel": incidentSlackChannelID
             }
-        },
-        function (error, response, body) {
-            if(error){
-                console.error(error);
+        }, {
+            headers: {
+                'Authorization': `GenieKey ${process.env.OPSGENIE_API_KEY}`,
             }
-            else{
-                console.log("Opsgenie incident started!");
-            }
-        })
+        });
+        console.log("Opsgenie incident started!");
     }
 }
 

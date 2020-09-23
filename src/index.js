@@ -44,7 +44,7 @@ const removeInactiveIncidentMembers = async (channelID) => {
     });
 }
 
-function sendIncidentLogFileToChannel(incidentSlackChannelId, docUrl) {
+function sendIncidentLogFileToChannel(channelId, docUrl) {
     var slackMessage = {
         username: 'During the incident',
         icon_emoji: ':pencil:',
@@ -58,11 +58,11 @@ function sendIncidentLogFileToChannel(incidentSlackChannelId, docUrl) {
     slackMessage.attachments.push({
         color: '#3367d6',
         title: 'Notes & Actions',
-        title_link: docUrl,
-        text: docUrl,
+        // title_link: tempVariable,
+        // text: tempVariable,
         footer: 'Use this document to to maintain a timeline of key events during an incident. Document actions, and keep track of any followup items that will need to be addressed.'
     });
-    slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
+    slack.sendSlackMessageToChannel(channelId, slackMessage);
 }
 
 
@@ -82,7 +82,7 @@ function verifySlackWebhook(body) {
     }
 }
 
-async function createIncidentFlow(body) {
+const createIncidentFlow = async (body) => {
     var incidentId = moment().format('YYYYMMDDHHmmss');
     var incidentName = body.text;
     var incidentCreatorSlackHandle = body.user_name;
@@ -107,53 +107,50 @@ async function createIncidentFlow(body) {
 }
 
 
-const createAdditionalResources = async (incidentId, incidentName, incidentSlackChannelId, incidentSlackChannel, incidentCreatorSlackHandle) => {
-    const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(incidentId,
-        incidentName,
-        incidentCreatorSlackHandle,
-        incidentSlackChannel,
+const createAdditionalResources = async (id, name, channelId, channel, creator) => {
+    const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(id,
+        name,
+        creator,
+        channel,
     );
 
-    slack.sendConferenceCallDetailsToChannel(incidentSlackChannelId, eventDetails);
+    slack.sendConferenceCallDetailsToChannel(channelId, eventDetails);
 
-    var fileName = incidentSlackChannel;
-    const url = await gapi.createIncidentsLogFile(fileName,
+    var fileName = channel;
+    const { data: { documentUrl } } = await gapi.createIncidentsLogFile(fileName,
         process.env.GDRIVE_INCIDENT_NOTES_FOLDER,
-        incidentName,
-        incidentCreatorSlackHandle,
+        name,
+        creator,
     );
+    console.log('createIncidentsLogFile', documentUrl);
 
-    sendIncidentLogFileToChannel(incidentSlackChannelId, url);
+    sendIncidentLogFileToChannel(channelId, documentUrl);
 
-    jira.createFollowupsEpic(incidentName, incidentSlackChannelId, incidentSlackChannel);
+    jira.createFollowupsEpic(name, channelId, channel);
+    console.log('Created JIRA Follows up');
 
     // Return a formatted message
-    var slackMessage = slack.createInitialMessage(incidentName, incidentCreatorSlackHandle, incidentSlackChannel, incidentSlackChannelId);
+    var slackMessage = slack.createInitialMessage(name, creator, channel, channelId);
 
     if(process.env.SLACK_INCIDENTS_CHANNEL){
         var channelsToNotify = process.env.SLACK_INCIDENTS_CHANNEL.split(",");
-        for(var i=0;i<channelsToNotify.length;i++){
-            sendSlackMessageToChannel("#" + channelsToNotify[i], slackMessage);
+        for(var i=0;i < channelsToNotify.length;i++){
+            await slack.sendSlackMessageToChannel(channelsToNotify[i], slackMessage);
         }
     }
 
     //remove join button from initial message and then send to incident channel
     slackMessage.attachments[0].actions.shift();
-    slack.sendSlackMessageToChannel(incidentSlackChannelId, slackMessage)
+    slack.sendSlackMessageToChannel(channelId, slackMessage)
 }
 
-
-const onIncidentAcknowledgement = (message) => {
-    pagerduty.onIncidentManagerAcknowledge(message);
-}
 
 const onIncidentManagerResolved = async (message) => {
     const details = await pagerduty.getIncidentDetails(message.incident.id);
-    const imEmail = await pagerduty.onIncidentManagerResolved(message);
     const totalActiveEvents = await pagerduty.getTotalActiveIncidents();
 
     if(totalActiveEvents > 0) {
-        console.debug('Other incidents workflow...');
+        console.debug('Total Incidents more than Zero workflow...');
         removeInactiveIncidentMembers(details.slack_channel);
     } else {
         console.debug('Zero active incidents workflow...');
@@ -216,7 +213,7 @@ const onBreakGlass = async (body) => {
     };
     slack.sendSlackMessageToChannel(channelId, slackMessage);
     const userInfo = await slack.getProfileInfo(body.user_id);
-    googleapi.addUserToGroup(userInfo.email);
+    googleapi.addUserToGroup(userInfo.email, false);
 }
 
 
@@ -239,7 +236,7 @@ http.createServer(function (req, res) {
         }
         else if(req.url.includes("/pagerduty")){
             req.on('end', async function () {
-                console.debug('sucessfully received pagerduty webhook from pagerduty');
+                console.debug('sucessfully received pagerduty webhook from pagerduty.');
                 post = JSON.parse(body);
                 if(post.messages){
                     for (var i = 0; i < post.messages.length; i++) {
@@ -247,7 +244,7 @@ http.createServer(function (req, res) {
                         // console.log(message);
                         if(message['event'] == 'incident.acknowledge'){
                             console.debug('incident acknowledgement.');
-                            onIncidentAcknowledgement(message);
+                            pagerduty.onIncidentManagerAcknowledge(message);
                         } else if(message['event'] == 'incident.resolve') {
                             console.debug('incident resolved.');
                             onIncidentManagerResolved(message);

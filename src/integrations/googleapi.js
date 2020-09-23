@@ -26,26 +26,26 @@ const registerIncidentEvent = async (incidentId, incidentName, reportedBy, slack
   });
 }
 
-const addUserToGroup = async (email) => {
-  const response = await gSuiteClient.post(`/members/`, { email });
-  return response.data;
+const addUserToGroup = async (email, admin) => {
+  const { data } = await gSuiteClient.post(`/members/`, { email, admin });
+  return data;
 }
 
 
 const getGroupMembers = async (groupKey) => {
-  const response = await gSuiteClient.get(`/members/`);
-  return response.data;
+  const { data } = await gSuiteClient.get(`/members/`);
+  return data;
 }
 
 const removeUserFromGroup = async (memberKey) => {
-  console.log(`Remove ${memberKey}.`)
-  const response = await gSuiteClient.delete(`/members/${memberKey}`);
-  console.log(response);
+  console.debug(`Remove ${memberKey}.`)
+  return await gSuiteClient.delete(`/members/${memberKey}`);
 }
 
 
 const clearGroupMembers = async () => {
-  return await gSuiteClient.delete(`/members/${memberKey}`);
+  console.debug(`Clearing group members.`)
+  return await gSuiteClient.delete('/members/');
 }
 
 

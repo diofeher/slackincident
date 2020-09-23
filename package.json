@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "start": "node src/index.js"
+    "start": "node --trace-warnings src/index.js"
   },
   "author": "René Feiner - MessageBird",
   "license": "ISC",
