@@ -121,12 +121,13 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     slack.sendConferenceCallDetailsToChannel(channelId, eventDetails);
 
     var fileName = channel;
+    console.log('createIncidentsLogFile:before', fileName, name, creator);
     const { data: { documentUrl } } = await gapi.createIncidentsLogFile(fileName,
         process.env.GDRIVE_INCIDENT_NOTES_FOLDER,
         name,
         creator,
     );
-    console.log('createIncidentsLogFile', documentUrl);
+    console.log('createIncidentsLogFile:after', documentUrl);
 
     sendIncidentLogFileToChannel(channelId, documentUrl);
 
