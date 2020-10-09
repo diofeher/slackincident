@@ -17,7 +17,7 @@ const googleapi = require('./integrations/googleapi.js');
 
 const CONSTANTS = {
     BREAK_GLASS_OFFTIME: 30 * 60,  // minutes
-    BREAK_GLASS_MINIMUM_LEN_DESCRIPTION: 10,
+    BREAK_GLASS_MINIMUM_LEN_DESCRIPTION: 10, // chars
 }
 
 const COLORS = {
@@ -84,6 +84,7 @@ function verifySlackWebhook(body) {
 }
 
 const createIncidentFlow = async (body) => {
+    console.debug('createIncidentFlow:initiating');
     var incidentId = moment().format('YYYYMMDDHHmmss');
     var incidentName = body.text;
     var incidentCreatorSlackHandle = body.user_name;
@@ -104,11 +105,13 @@ const createIncidentFlow = async (body) => {
     pagerduty.alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle);
     createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle);
 
+    console.debug('createIncidentFlow:end');
     return incidentSlackChannelID;
 }
 
 
 const createAdditionalResources = async (id, name, channelId, channel, creator) => {
+    console.log('createAdditionalResources:starting');
     const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(id,
         name,
         creator,
@@ -143,6 +146,7 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     //remove join button from initial message and then send to incident channel
     slackMessage.attachments[0].actions.shift();
     slack.sendSlackMessageToChannel(channelId, slackMessage)
+    console.log('createAdditionalResources:ending');
 }
 
 

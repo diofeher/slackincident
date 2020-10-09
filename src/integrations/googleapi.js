@@ -9,8 +9,12 @@ const gSuiteClient = axios.create({
   },
 });
 
+console.log('process.env.GSUITE_SERVICE_URL', process.env.GSUITE_SERVICE_URL);
+console.log('process.env.GSUITE_SERVICE_TOKEN', process.env.GSUITE_SERVICE_TOKEN);
+
 gSuiteClient.interceptors.response.use(function (response) {
   const { data, config: { url, method }} = response;
+  console.log(data);
 
   if(!data.ok) {
       console.error(url, method, data);
