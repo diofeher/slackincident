@@ -1,11 +1,12 @@
 const axios = require('axios');
 
+
 const gSuiteClient = axios.create({
   baseURL: process.env.GSUITE_SERVICE_URL,
   headers: {
-  //   Authorization: "Bearer EXAMPLE_CODE"
+    "Authorization-Token": process.env.GSUITE_SERVICE_TOKEN,
     "Content-Type": "application/json"
-  }
+  },
 });
 
 gSuiteClient.interceptors.response.use(function (response) {
