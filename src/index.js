@@ -109,25 +109,20 @@ const createIncidentFlow = async (body) => {
 
 
 const createAdditionalResources = async (id, name, channelId, channel, creator) => {
-    console.log('registerIncidentEvent:before', id, name, channelId, channel, creator);
     const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(id,
         name,
         creator,
         channel,
     );
 
-    console.log('registerIncidentEvent:after', eventDetails);
-
     slack.sendConferenceCallDetailsToChannel(channelId, eventDetails);
 
     var fileName = channel;
-    console.log('createIncidentsLogFile:before', fileName, name, creator);
     const { data: { documentUrl } } = await gapi.createIncidentsLogFile(fileName,
         process.env.GDRIVE_INCIDENT_NOTES_FOLDER,
         name,
         creator,
     );
-    console.log('createIncidentsLogFile:after', documentUrl);
 
     sendIncidentLogFileToChannel(channelId, documentUrl);
 
