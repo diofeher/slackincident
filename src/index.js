@@ -84,7 +84,6 @@ function verifySlackWebhook(body) {
 }
 
 const createIncidentFlow = async (body) => {
-    console.debug('createIncidentFlow:initiating');
     var incidentId = moment().format('YYYYMMDDHHmmss');
     var incidentName = body.text;
     var incidentCreatorSlackHandle = body.user_name;
@@ -105,18 +104,19 @@ const createIncidentFlow = async (body) => {
     pagerduty.alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle);
     createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle);
 
-    console.debug('createIncidentFlow:end');
     return incidentSlackChannelID;
 }
 
 
 const createAdditionalResources = async (id, name, channelId, channel, creator) => {
-    console.log('createAdditionalResources:starting');
+    console.log('registerIncidentEvent:before', id, name, channelId, channel, creator);
     const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(id,
         name,
         creator,
         channel,
     );
+
+    console.log('registerIncidentEvent:after', eventDetails);
 
     slack.sendConferenceCallDetailsToChannel(channelId, eventDetails);
 

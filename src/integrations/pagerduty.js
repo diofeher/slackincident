@@ -105,7 +105,6 @@ const getIncidentManagerEmail = async (userURL) => {
 
 
 const alertIncidentManager = async (incidentName, incidentSlackChannelID, incidentCreatorSlackHandle) => {
-    console.log('alertIncidentManager:starting');
     if(process.env.DRY_RUN){
         console.log('DRY_RUN: Creating incident!');
         return;
@@ -126,7 +125,6 @@ const alertIncidentManager = async (incidentName, incidentSlackChannelID, incide
                 }
             },
         });
-        console.log('alertIncidentManager:end');
     }
     if(process.env.OPSGENIE_API_KEY){
         await axios.post(`${process.env.OPSGENIE_URL}/v1/incidents/create`, {
