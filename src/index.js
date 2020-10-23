@@ -2,13 +2,9 @@
 
 const http = require('http');
 const qs = require('querystring');
-// const {google} = require('googleapis'); // Add "googleapis": "^33.0.0", to package.json 'dependencies' when you enable this again.
-const request = require('request');
 const moment = require('moment');
 
 const gapi = require("./integrations/googleapi.js");
-const rp = require('request-promise');
-const date = require('date-and-time');
 const pagerduty = require('./integrations/pagerduty');
 const slack = require('./integrations/slack');
 const jira = require('./integrations/jira');

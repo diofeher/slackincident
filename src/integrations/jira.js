@@ -1,5 +1,6 @@
 const axios = require('axios');
 const slack = require('./slack');
+const date = require('date-and-time');
 
 
 const createPostMortem = async (incidentName, epicKey, incidentSlackChannelId) => {
@@ -57,7 +58,6 @@ const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlack
         throw err;
     });
 
-    console.log('Jira Response', JSON.stringify(response.data));
     var epicKey = response.data['key'];
     var epicUrl = epicKey ? 'https://' + jiraDomain + '/browse/' + epicKey : '';
     slack.sendEpicToChannel(incidentChannelId, epicUrl);
