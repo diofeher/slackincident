@@ -17,6 +17,9 @@ gSuiteClient.interceptors.response.use(function (response) {
   }
   return response;
 }, function (error) {
+  const { config, response } = error;
+  console.log(`[-] Error when requesting ${config.url}!`);
+  console.log(`[-] Response ${response.status}: ${JSON.stringify(response.data)}!`);
   return Promise.reject(error);
 });
 
