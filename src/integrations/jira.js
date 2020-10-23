@@ -57,9 +57,8 @@ const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlack
         throw err;
     });
 
-    const data = response.json();
-    console.log('Jira Response', JSON.stringify(data));
-    var epicKey = data['key'];
+    console.log('Jira Response', JSON.stringify(response.data));
+    var epicKey = response.data['key'];
     var epicUrl = epicKey ? 'https://' + jiraDomain + '/browse/' + epicKey : '';
     slack.sendEpicToChannel(incidentChannelId, epicUrl);
     createPostMortem(incidentName, epicKey, incidentChannelId);
