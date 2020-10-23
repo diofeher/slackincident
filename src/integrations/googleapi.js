@@ -13,7 +13,7 @@ gSuiteClient.interceptors.response.use(function (response) {
   const { data, config: { url, method }} = response;
 
   if(!data.ok) {
-      console.error(url, method, data);
+      console.error('data not ok', url, method, JSON.stringify(data.event));
   }
   return response;
 }, function (error) {
