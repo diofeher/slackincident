@@ -53,7 +53,7 @@ const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlack
             pass: jiraApiKey
         },
     }).catch((err) => {
-        console.log('createFollowupsEpic.error', JSON.stringify(err));
+        console.log('createFollowupsEpic.error', JSON.stringify(err.response.data));
         throw err;
     });
 
