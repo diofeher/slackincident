@@ -44,15 +44,14 @@ const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlack
             },
             "summary": incidentName,
             "customfield_10009": incidentSlackChannel,
-        }
-    };
-
-    const response = await axios.post(`https://${jiraDomain}/rest/api/3/issue`, newMessage, {
+        },
         auth: {
             user: jiraUser,
             pass: jiraApiKey
         },
-    }).catch((err) => {
+    };
+
+    const response = await axios.post(`https://${jiraDomain}/rest/api/3/issue`, newMessage).catch((err) => {
         console.log('createFollowupsEpic.error', JSON.stringify(err));
         throw err;
     });
