@@ -1,31 +1,28 @@
-function createPostMortem(incidentName, epicKey, incidentSlackChannelId){
+const axios = require('axios');
+const slack = require('./slack');
 
+
+const createPostMortem = async (incidentName, epicKey, incidentSlackChannelId) => {
     if(!process.env.POST_MORTEMS_URL){
         return;
     }
 
     const now = new Date();
-
-    request.post({
-        url: process.env.POST_MORTEMS_URL + '/incident/create',
-        json: {
-            "key" : process.env.POST_MORTEMS_KEY,
-            "incident" : {
-                "name": incidentName,
-                "when": date.format(now, 'YYYY-MM-DD HH:mm:ss'),
-                "issueTracking" : "jira:"+epicKey,
-                "channel" : "slack:"+incidentSlackChannelId
-            }
+    axios.post(process.env.POST_MORTEMS_URL + '/incident/create', {
+        key: process.env.POST_MORTEMS_KEY,
+        incident: {
+            name: incidentName,
+            when: date.format(now, 'YYYY-MM-DD HH:mm:ss'),
+            issueTracking: `jira: ${epicKey}`,
+            channel: `slack: ${incidentSlackChannelId}`
         }
-    },
-    function (error, response, body) {
-        if (error) {
-            console.error(error);
-        }
+    }).catch((err) => {
+        console.log('createPostMortem.error', JSON.stringify(err));
     });
 }
 
-function createFollowupsEpic(incidentName, incidentChannelId, incidentSlackChannel) {
+
+const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlackChannel) => {
     var jiraDomain = process.env.JIRA_DOMAIN;
     //Return if JIRA details are not specified. Assuming checking the domain is enough
     if (!jiraDomain) {
@@ -50,25 +47,21 @@ function createFollowupsEpic(incidentName, incidentChannelId, incidentSlackChann
         }
     };
 
-    request.post({
-            url: 'https://' + jiraDomain + '/rest/api/3/issue',
-            auth: {
-                'user': jiraUser,
-                'pass': jiraApiKey
-            },
-            json: newMessage
+    const response = await axios.post(`https://${jiraDomain}'/rest/api/3/issue`, newMessage, {
+        auth: {
+            user: jiraUser,
+            pass: jiraApiKey
         },
-        function (error, response, body) {
-            if (error) {
-                console.error('Sending message to Jira failed:', error);
+    }).catch((err) => {
+        console.log('createFollowupsEpic.error', JSON.stringify(err));
+        throw err;
+    });
 
-                throw new Error('Sending message to Jira failed');
-            }
-            var epicKey = response.body['key'];
-            var epicUrl = epicKey ? 'https://' + jiraDomain + '/browse/' + epicKey : '';
-            sendEpicToChannel(incidentChannelId, epicUrl);
-            createPostMortem(incidentName, epicKey, incidentChannelId)
-        });
+    console.log('Jira Response', JSON.stringify(response));
+    var epicKey = response.data['key'];
+    var epicUrl = epicKey ? 'https://' + jiraDomain + '/browse/' + epicKey : '';
+    slack.sendEpicToChannel(incidentChannelId, epicUrl);
+    createPostMortem(incidentName, epicKey, incidentChannelId);
 }
 
 module.exports = {
