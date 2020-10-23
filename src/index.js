@@ -128,9 +128,11 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     // Return a formatted message
     var slackMessage = slack.createInitialMessage(name, creator, channel, channelId);
 
+    console.log('process.env.SLACK_INCIDENTS_CHANNEL', process.env.SLACK_INCIDENTS_CHANNEL);
     if(process.env.SLACK_INCIDENTS_CHANNEL){
         var channelsToNotify = process.env.SLACK_INCIDENTS_CHANNEL.split(",");
         for(var i=0;i < channelsToNotify.length;i++){
+            console.log('Notified initial message:', channelsToNotify[i]);
             await slack.sendSlackMessageToChannel(channelsToNotify[i], slackMessage);
         }
     }
