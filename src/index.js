@@ -23,6 +23,7 @@ const COLORS = {
 
 const removeInactiveIncidentMembers = async (channelID) => {
     const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
+    console.log(`removeInactiveIncidentMembers.activeIncidents: ${activeIncidents}`);
 
     var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
         const details = await pagerduty.getIncidentDetails(incident.id);
@@ -36,6 +37,7 @@ const removeInactiveIncidentMembers = async (channelID) => {
     (activeMembers || []).map(async (member) => {
         if(!membersActiveIncidents.includes(member)) {
             const { email } = await slack.getProfileInfo(member);
+            console.log(`Removing ${email}`);
             email && googleapi.removeUserFromGroup(email);
         };
     });
@@ -147,10 +149,10 @@ const onIncidentManagerResolved = async (message) => {
     const totalActiveEvents = await pagerduty.getTotalActiveIncidents();
 
     if(totalActiveEvents > 0) {
-        console.debug('Total Incidents more than Zero workflow...');
+        console.debug(`Total Incidents more than Zero workflow... ${totalActiveEvents}`);
         removeInactiveIncidentMembers(details.slack_channel);
     } else {
-        console.debug('Zero active incidents workflow...');
+        console.debug(`Zero active incidents workflow... ${totalActiveEvents}`);
         googleapi.clearGroupMembers();
     }
 
