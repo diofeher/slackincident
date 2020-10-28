@@ -51,8 +51,8 @@ function sendIncidentLogFileToChannel(channelId, docUrl) {
     slackMessage.attachments.push({
         color: '#3367d6',
         title: 'Notes & Actions',
-        // title_link: tempVariable,
-        // text: tempVariable,
+        title_link: docUrl,
+        text: docUrl,
         footer: 'Use this document to to maintain a timeline of key events during an incident. Document actions, and keep track of any followup items that will need to be addressed.'
     });
     slack.sendSlackMessageToChannel(channelId, slackMessage);
