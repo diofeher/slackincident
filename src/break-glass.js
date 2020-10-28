@@ -44,8 +44,11 @@ const testTotalActiveIncidents = async (userId) => {
 
 const testTimeout = async(channelId, username) => {
     const currentTime = new Date();
-    console.log('testTimeout', channelId);
-    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
+    try {
+        var pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
+    } catch {
+        return true
+    }
     const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
     const delta = (currentTime - incidentCreatedTime);
 
