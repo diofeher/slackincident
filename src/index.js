@@ -27,8 +27,10 @@ const removeInactiveIncidentMembers = async (channelID) => {
     console.log('activeMembers', activeMembers);
 
     (activeMembers || []).map(async (member) => {
+        console.log('activeMember', member);
         if(!membersActiveIncidents.includes(member)) {
             const { email } = await slack.getProfileInfo(member);
+            console.log('email', email);
             console.log(`Removing ${email}`);
             email && googleapi.removeUserFromGroup(email);
         };
