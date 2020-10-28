@@ -76,6 +76,6 @@ const onBreakGlass = async (body) => {
     googleapi.addUserToGroup(userInfo.email, false);
 }
 
-exports.default = {
+module.exports = {
     onBreakGlass,
 }
