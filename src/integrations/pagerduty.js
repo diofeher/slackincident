@@ -54,7 +54,8 @@ const getIncidentBySlackChannel = async (channelId) => {
 }
 
 const getTotalActiveIncidents = async () => {
-    return (await getActiveIncidents()).length;
+    const { incidents } = await getActiveIncidents();
+    return incidents.length;
 }
 
 const getIncidentDetails = async (incidentID) => {
