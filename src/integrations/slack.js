@@ -217,6 +217,7 @@ const getBotInfo = async (bot) => {
 
 const getMembersChannel = async (channel) => {
     const { data } = await slackClient.post('/conversations.members', { channel });
+    console.log('getMembersChannel', data);
     return data.members;
 }
 
