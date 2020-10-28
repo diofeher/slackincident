@@ -164,6 +164,10 @@ http.createServer(function (req, res) {
             req.on('end', async function () {
                 post = qs.parse(body);
                 onBreakGlass(post);
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.write(JSON.stringify({
+                    text: "Hey, we received your request and we are working it..."
+                }));
                 res.end();
             });
         }

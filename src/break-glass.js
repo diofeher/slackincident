@@ -93,6 +93,10 @@ const onBreakGlass = async (body) => {
         return;
     };
 
+    slack.sendSlackMessageToChannel(user_id, {
+        text: "Your request for breaking the glass was successful."
+    });
+
     var slackMessage = {
         icon_emoji: ':fire_engine:',
         attachments: [{
