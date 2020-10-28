@@ -8,11 +8,7 @@ const testIfIsChannelIncident = async(channelId, userId) => {
     const botUserInfo = await slack.getBotInfo(bot_id);
     const { channel } = await slack.getChannelInfo(channelId);
 
-    if (!channel) {
-        return true
-    }
-
-    if (botUserInfo.user_id != channel.creator) {
+    if (!channel || (channel && botUserInfo.user_id != channel.creator)) {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
