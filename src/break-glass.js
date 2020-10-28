@@ -8,6 +8,10 @@ const testIfIsChannelIncident = async(channelId, userId) => {
     const botUserInfo = await slack.getBotInfo(bot_id);
     const { channel } = await slack.getChannelInfo(channelId);
 
+    if (!channel) {
+        return true
+    }
+
     if (botUserInfo.user_id != channel.creator) {
         var slackMessage = {
             icon_emoji: ':x:',
@@ -32,7 +36,7 @@ const testTotalActiveIncidents = async (userId) => {
                 text: `There's no active incidents, you can't break the glass.`,
             }]
         };
-        slack.sendSlackMessageToChannel(user_id, slackMessage);
+        slack.sendSlackMessageToChannel(userId, slackMessage);
         return true;
     }
     return false;
@@ -41,7 +45,7 @@ const testTotalActiveIncidents = async (userId) => {
 const testTimeout = async(channelId, username) => {
     const currentTime = new Date();
     console.log('testTimeout', channelId);
-    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channel_id);
+    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channelId);
     const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
     const delta = (currentTime - incidentCreatedTime);
 
