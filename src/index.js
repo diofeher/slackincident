@@ -126,10 +126,6 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
             await slack.sendSlackMessageToChannel(channelsToNotify[i], slackMessage);
         }
     }
-
-    //remove join button from initial message and then send to incident channel
-    slackMessage.attachments[0].actions.shift();
-    slack.sendSlackMessageToChannel(channelId, slackMessage)
 }
 
 

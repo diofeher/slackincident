@@ -34,7 +34,7 @@ function sendIncidentManagerJoiningSoonMessageToChannel(incidentSlackChannelId, 
 
     slackMessage.attachments.push({
         color: '#FF0000',
-        text: incidentManager + ' will join soon as incident manager. Please join the conference call. See pinned messages for details.',
+        text: incidentManager + ' will join soon as incident manager. Please join the conference call.',
     });
     sendSlackMessageToChannel(incidentSlackChannelId, slackMessage);
 }
