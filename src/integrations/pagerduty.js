@@ -22,7 +22,15 @@ const pagerDutyClient = axios.create({
 
 const getActiveIncidents = async () => {
     const { data } = await pagerDutyClient.get('/incidents?statuses[]=triggered&statuses[]=acknowledged&total=true');
-    return data;
+
+    const incidents = [];
+    for (const incident of data.incidents) {
+        const details = await getIncidentDetails(incident.id);
+        if(!details.slack_channel) continue;
+        incidents.push(incident);
+    };
+
+    return { incidents }
 }
 
 const asyncFilter = async (arr, predicate) => {
@@ -111,13 +119,13 @@ const alertIncidentManager = async (incidentName, incidentSlackChannelID, incide
     }
     if(process.env.PAGERDUTY_API_TOKEN){
         axios.post("https://events.pagerduty.com/v2/enqueue", {
-            "routing_key": process.env.PAGERDUTY_API_TOKEN,
-            "event_action": "trigger",
-            "payload": {
+            routing_key: process.env.PAGERDUTY_API_TOKEN,
+            event_action: "trigger",
+            payload: {
                 summary: "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
                 source: incidentSlackChannelID,
                 severity: "critical",
-                "custom_details": {
+                custom_details: {
                     "slack_deep_link_url": "https://slack.com/app_redirect?team=" + process.env.SLACK_TEAM_ID + "&channel=" + incidentSlackChannelID,
                     "slack_deep_link": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelID,
                     "initiated_by": incidentCreatorSlackHandle,
@@ -128,13 +136,13 @@ const alertIncidentManager = async (incidentName, incidentSlackChannelID, incide
     }
     if(process.env.OPSGENIE_API_KEY){
         await axios.post(`${process.env.OPSGENIE_URL}/v1/incidents/create`, {
-            "message": incidentName,
-            "description": "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
-            "priority":"P1",
-            "responders":[
+            message: incidentName,
+            description: "New incident '" + incidentName + "' created by @" + incidentCreatorSlackHandle,
+            priority:"P1",
+            responders:[
                 {"id": process.env.OPSGENIE_INCIDENT_MANAGER_TEAM_ID ,"type":"team"}
             ],
-            "details": {
+            details: {
                 "slack_deep_link_url": "https://slack.com/app_redirect?team=" + process.env.SLACK_TEAM_ID + "&channel=" + incidentSlackChannelID,
                 "slack_deep_link": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelID,
                 "initiated_by": incidentCreatorSlackHandle,
