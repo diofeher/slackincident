@@ -85,7 +85,7 @@ const testMinimumLength = async(userId, text) => {
 const onBreakGlass = async (body) => {
     const { text, channel_id, user_name, user_id } = body;
 
-    const errors = Promise.all([
+    const errors = await Promise.all([
         await testMinimumLength(user_id, text),
         await testTotalActiveIncidents(user_id),
         await testIfIsChannelIncident(channel_id, user_id),
