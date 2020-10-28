@@ -16,16 +16,12 @@ const removeInactiveIncidentMembers = async (channelID) => {
     const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
 
     var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
-        console.log('incident.id', incident.id);
         const details = await pagerduty.getIncidentDetails(incident.id);
-        console.log('detailedIncidents', details.slack_channel);
         const members = await slack.getMembersChannel(details.slack_channel);
-        console.log('detailedIncidents.members', members);
         return members || [];
     }));
 
     const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
-    console.log('membersActiveIncidents', membersActiveIncidents);
     console.log('channelId to remove people', channelID)
     const activeMembers = await slack.getMembersChannel(channelID);
     console.log('activeMembers', activeMembers);
