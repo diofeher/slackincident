@@ -32,6 +32,8 @@ const getActiveIncidents = async () => {
         incidents.push(incident);
     };
 
+    console.log('getActiveIncidents.length', incidents.length);
+
     return { incidents }
 }
 
@@ -56,7 +58,7 @@ const getIncidentBySlackChannel = async (channelId) => {
 }
 
 const getTotalActiveIncidents = async () => {
-    return (await getActiveIncidents()).total;
+    return (await getActiveIncidents()).length;
 }
 
 const getIncidentDetails = async (incidentID) => {
