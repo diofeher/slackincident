@@ -1,6 +1,7 @@
 const { COLORS, CONSTANTS } = require('./config');
 const pagerduty = require('./integrations/pagerduty');
 const slack = require('./integrations/slack');
+const googleapi = require('./integrations/googleapi');
 
 
 const testIfIsChannelIncident = async(channelId, userId) => {
@@ -13,7 +14,7 @@ const testIfIsChannelIncident = async(channelId, userId) => {
             icon_emoji: ':x:',
             attachments: [{
                 color: COLORS.RED,
-                text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
+                text: `This command only can be used on channels created by the bot. Break glass won't work here.`,
             }]
         };
         slack.sendSlackMessageToChannel(userId, slackMessage);
@@ -49,7 +50,7 @@ const testTimeout = async(channelId, username) => {
     const delta = (currentTime - incidentCreatedTime);
 
 
-    if (delta / 1000 > CONSTANTS.BREAK_GLASS_OFFTIME) {
+    if (delta / 1000 > CONSTANTS.BREAK_GLASS_TIMEOUT) {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
