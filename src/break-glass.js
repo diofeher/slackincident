@@ -100,7 +100,7 @@ const onBreakGlass = async (body) => {
     var slackMessage = {
         icon_emoji: ':fire_engine:',
         attachments: [{
-            text: `${user_name} broke the glass: "${text}"`,
+            text: `${user_name} has temporarily elevated permissions. Reason: "${text}"`,
             color: COLORS.RED,
         }],
     };
