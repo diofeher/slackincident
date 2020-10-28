@@ -40,6 +40,7 @@ const testTotalActiveIncidents = async (userId) => {
 
 const testTimeout = async(channelId, username) => {
     const currentTime = new Date();
+    console.log('testTimeout', channel_id);
     const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channel_id);
     const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
     const delta = (currentTime - incidentCreatedTime);
@@ -49,7 +50,7 @@ const testTimeout = async(channelId, username) => {
         var slackMessage = {
             icon_emoji: ':x:',
             attachments: [{
-                text: `${user_name} cannot break the glass anymore. Time has passed.`,
+                text: `${username} cannot break the glass anymore. Time has passed.`,
                 color: COLORS.RED,
             }],
         };
