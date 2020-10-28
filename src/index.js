@@ -4,22 +4,13 @@ const http = require('http');
 const qs = require('querystring');
 const moment = require('moment');
 
-const gapi = require("./integrations/googleapi.js");
+const googleapi = require('./integrations/googleapi');
 const pagerduty = require('./integrations/pagerduty');
 const slack = require('./integrations/slack');
 const jira = require('./integrations/jira');
-const googleapi = require('./integrations/googleapi.js');
+const { onBreakGlass } = require('./break-glass');
+const { COLORS } = require('./config');
 
-
-const CONSTANTS = {
-    BREAK_GLASS_OFFTIME: 30 * 60,  // minutes
-    BREAK_GLASS_MINIMUM_LEN_DESCRIPTION: 10, // chars
-}
-
-const COLORS = {
-    RED: '#FF0000',
-    GREEN: '#008000',
-}
 
 const removeInactiveIncidentMembers = async (channelID) => {
     const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
@@ -107,7 +98,7 @@ const createIncidentFlow = async (body) => {
 
 
 const createAdditionalResources = async (id, name, channelId, channel, creator) => {
-    const { data: {event: eventDetails} } = await gapi.registerIncidentEvent(id,
+    const { data: {event: eventDetails} } = await googleapi.registerIncidentEvent(id,
         name,
         creator,
         channel,
@@ -116,7 +107,7 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     slack.sendConferenceCallDetailsToChannel(channelId, eventDetails);
 
     var fileName = channel;
-    const { data: { documentUrl } } = await gapi.createIncidentsLogFile(fileName,
+    const { data: { documentUrl } } = await googleapi.createIncidentsLogFile(fileName,
         process.env.GDRIVE_INCIDENT_NOTES_FOLDER,
         name,
         creator,
@@ -164,67 +155,6 @@ const onIncidentManagerResolved = async (message) => {
     };
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
-
-const onBreakGlass = async (body) => {
-    const { text, channel_id, user_name, user_id } = body;
-    if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
-        var slackMessage = {
-            icon_emoji: ':x:',
-            attachments: [{
-                color: COLORS.RED,
-                text: `You need to specify a description when using /break-glass. Use like: /break-glass I want superpowers!`,
-            }]
-        };
-        slack.sendSlackMessageToChannel(user_id, slackMessage);
-        return;
-    }
-
-    const currentTime = new Date();
-    const pagerDutyDetails = await pagerduty.getIncidentBySlackChannel(channel_id);
-    const incidentCreatedTime = new Date(pagerDutyDetails.created_at);
-    const delta = (currentTime - incidentCreatedTime);
-
-    if (delta / 1000 > CONSTANTS.BREAK_GLASS_OFFTIME) {
-        var slackMessage = {
-            icon_emoji: ':x:',
-            attachments: [{
-                text: `${user_name} cannot break the glass anymore. Time has passed.`,
-                color: COLORS.RED,
-            }],
-        };
-        slack.sendSlackMessageToChannel(channel_id, slackMessage);
-        return;
-    }
-
-    const { bot_id } = await slack.getProfileInfo();
-    const botUserInfo = await slack.getBotInfo(bot_id);
-    const { channel } = await slack.getChannelInfo(channel_id);
-
-    if (botUserInfo.user_id != channel.creator) {
-        var slackMessage = {
-            icon_emoji: ':x:',
-            attachments: [{
-                color: COLORS.RED,
-                text: `This command can be used only on channels created by the bot. Break glass won't work here.`,
-            }]
-        };
-        slack.sendSlackMessageToChannel(user_id, slackMessage);
-        return;
-    }
-
-    var slackMessage = {
-        icon_emoji: ':fire_engine:',
-        attachments: [{
-            text: `${user_name} broke the glass: "${text}"`,
-            color: COLORS.RED,
-        }],
-    };
-
-    slack.sendSlackMessageToChannel(channel_id, slackMessage);
-    const userInfo = await slack.getProfileInfo(user_id);
-    googleapi.addUserToGroup(userInfo.email, false);
-}
-
 
 http.createServer(function (req, res) {
     try {
