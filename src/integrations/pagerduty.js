@@ -26,6 +26,8 @@ const getActiveIncidents = async () => {
     const incidents = [];
     for (const incident of data.incidents) {
         const details = await getIncidentDetails(incident.id);
+        console.log('getActiveIncidents.incident', incident);
+        console.log('getActiveIncidents.details', details);
         if(!details.slack_channel) continue;
         incidents.push(incident);
     };
