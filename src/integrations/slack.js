@@ -55,14 +55,14 @@ function createInitialMessage(incidentName, slackUserName, incidentSlackChannel,
         color: '#8f0000',
         title: incidentName,
         text: "Incident Channel: #" + incidentSlackChannel,
-        "fallback": "Join Incident Channel #" + incidentSlackChannel,
-        "actions": [
-            // {
-            //     "type": "button",
-            //     "text": "Join Incident Channel",
-            //     "url": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelId,
-            //     "style": "danger"
-            // }
+        fallback: "Join Incident Channel #" + incidentSlackChannel,
+        actions: [
+            {
+                "type": "button",
+                "text": "Join Incident Channel",
+                "url": "slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentSlackChannelId,
+                "style": "danger"
+            }
         ],
         footer: `reported by @${slackUserName}`
     });

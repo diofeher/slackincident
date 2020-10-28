@@ -26,6 +26,7 @@ const removeInactiveIncidentMembers = async (channelID) => {
 
     const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
     console.log('membersActiveIncidents', membersActiveIncidents);
+    console.log('channelId to remove people', channelID)
     const activeMembers = await slack.getMembersChannel(channelID);
     console.log('activeMembers', activeMembers);
 
@@ -135,7 +136,6 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     //remove join button from initial message and then send to incident channel
     slackMessage.attachments[0].actions.shift();
     slack.sendSlackMessageToChannel(channelId, slackMessage)
-    console.log('createAdditionalResources:ending');
 }
 
 
