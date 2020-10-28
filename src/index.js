@@ -14,16 +14,18 @@ const { COLORS } = require('./config');
 
 const removeInactiveIncidentMembers = async (channelID) => {
     const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
-    console.log(`removeInactiveIncidentMembers.activeIncidents: ${activeIncidents}`);
+    console.log('removeInactiveIncidentMembers.activeIncidents', activeIncidents);
 
     var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
         const details = await pagerduty.getIncidentDetails(incident.id);
+        console.log('detailedIncidents', details);
         const members = await slack.getMembersChannel(details.slack_channel);
         return members || [];
     }));
 
     const membersActiveIncidents = [...new Set(detailedIncidents.flat())];
     const activeMembers = await slack.getMembersChannel(channelID);
+    console.log('activeMembers', activeMembers);
 
     (activeMembers || []).map(async (member) => {
         if(!membersActiveIncidents.includes(member)) {
