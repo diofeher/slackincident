@@ -16,6 +16,7 @@ const removeInactiveIncidentMembers = async (channelID) => {
     const { incidents: activeIncidents } = await pagerduty.getActiveIncidents();
 
     var detailedIncidents = await Promise.all(activeIncidents.map(async (incident) => {
+        console.log('incident.id', incident.id);
         const details = await pagerduty.getIncidentDetails(incident.id);
         console.log('detailedIncidents', details.slack_channel);
         const members = await slack.getMembersChannel(details.slack_channel);
@@ -143,7 +144,7 @@ const onIncidentManagerResolved = async (message) => {
     const totalActiveEvents = await pagerduty.getTotalActiveIncidents();
 
     if(totalActiveEvents > 0) {
-        console.debug(`Total Incidents more than Zero workflow... ${totalActiveEvents}`);
+        console.debug(`Total Incidents more than Zero workflow... ${totalActiveEvents}, on channel ${details.slack_channel}`);
         removeInactiveIncidentMembers(details.slack_channel);
     } else {
         console.debug(`Zero active incidents workflow... ${totalActiveEvents}`);
