@@ -54,19 +54,10 @@ function sendIncidentLogFileToChannel(channelId, docUrl) {
     slack.sendSlackMessageToChannel(channelId, slackMessage);
 }
 
-
-function verifyPostRequest(method) {
-    if (method !== 'POST') {
-        const error = new Error('Only POST requests are accepted');
-        error.code = 405;
-        throw error;
-    }
-}
-
 function verifySlackWebhook(body) {
     if (!body || body.token !== process.env.SLACK_COMMAND_TOKEN) {
         const error = new Error('Invalid credentials');
-        error.code = 401;
+        error.code = 400;
         throw error;
     }
 }
@@ -150,71 +141,66 @@ const onIncidentManagerResolved = async (message) => {
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
 
-http.createServer(function (req, res) {
-    try {
-        verifyPostRequest(req.method);
+// Main application
+var express = require('express');
+var bodyParser = require('body-parser');
+var app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded());
 
-        var body = '';
-        var post = {};
-        req.on('data', function (chunk) {
-            body += chunk;
-        });
-
-        if(req.url.includes("/break-glass")) {
-            req.on('end', async function () {
-                post = qs.parse(body);
-                onBreakGlass(post);
-                res.writeHead(200, {'Content-Type': 'application/json'});
-                res.write(JSON.stringify({
-                    text: "Hey, we received your request and we are working it..."
-                }));
-                res.end();
-            });
+app.post('/pagerduty', (req, res) => {
+    verifySlackWebhook(req.body);
+    console.debug('Sucessfully received pagerduty webhook from pagerduty.');
+    post = JSON.parse(req.body);
+    if(post.messages){
+        for (var i = 0; i < post.messages.length; i++) {
+            var message = post.messages[i];
+            if(message['event'] == 'incident.acknowledge'){
+                console.debug('incident acknowledgement.');
+                pagerduty.onIncidentManagerAcknowledge(message);
+            } else if(message['event'] == 'incident.resolve') {
+                console.debug('incident resolved.');
+                onIncidentManagerResolved(message);
+            }
         }
-        else if(req.url.includes("/pagerduty")){
-            req.on('end', async function () {
-                console.debug('sucessfully received pagerduty webhook from pagerduty.');
-                post = JSON.parse(body);
-                if(post.messages){
-                    for (var i = 0; i < post.messages.length; i++) {
-                        var message = post.messages[i];
-                        if(message['event'] == 'incident.acknowledge'){
-                            console.debug('incident acknowledgement.');
-                            pagerduty.onIncidentManagerAcknowledge(message);
-                        } else if(message['event'] == 'incident.resolve') {
-                            console.debug('incident resolved.');
-                            onIncidentManagerResolved(message);
-                        }
-                    }
-                }
-                res.writeHead(200, {'Content-Type': 'application/json'});
-                res.write(JSON.stringify({
-                    text: "OK"
-                }));
-                res.end();
-            });
-        }
-        else {
-            req.on('end', async function () {
-                post = qs.parse(body);
-                verifySlackWebhook(post);
-
-                var incidentChannelId = await createIncidentFlow(post);
-                console.log('Successful execution of incident flow');
-                res.writeHead(200, {'Content-Type': 'application/json'});
-                res.write(JSON.stringify({
-                    text: "Incident management process started. Join incident channel: slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentChannelId,
-                    incident_channel_id: incidentChannelId
-                }));
-                res.end();
-            });
-        }
-    } catch (error) {
-        console.log(error);
-
-        res.writeHead((error.code ? error.code : 500), {'Content-Type': 'application/json'});
-        res.write(JSON.stringify({response_type: "in_channel", text: error.message}));
-        res.end();
     }
-}).listen(process.env.PORT ? process.env.PORT : 8080);
-console.log('Server listening on port ' + (process.env.PORT ? process.env.PORT : 8080));
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({
+        text: "OK"
+    }));
+    res.end();
+});
+
+app.post('/break-glass', (req, res) => {
+    verifySlackWebhook(req.body);
+    onBreakGlass(req.body);
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({
+        text: "Hey, we received your request and we are working it..."
+    }));
+    res.end();
+});
+
+app.post('/', (req, res) => {
+    verifySlackWebhook(req.body);
+    var incidentChannelId = await createIncidentFlow(req.body);
+    console.log('Successful execution of incident flow');
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({
+        text: "Incident management process started. Join incident channel: slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentChannelId,
+        incident_channel_id: incidentChannelId
+    }));
+    res.end();
+});
+
+app.use(function (err, req, res, next) {
+    console.log(err);
+
+    res.writeHead(error.code || 500, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({response_type: "in_channel", text: error.message}));
+    res.end();
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port);
+console.log(`Server listening on port ${port}.`);

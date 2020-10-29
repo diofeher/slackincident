@@ -66,24 +66,17 @@ const testTimeout = async(channelId, username) => {
 
 const testMinimumLength = async(userId, text) => {
     if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
-        var slackMessage = {
-            icon_emoji: ':x:',
-            attachments: [{
-                color: COLORS.RED,
-                text: `You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`,
-            }]
-        };
-        slack.sendSlackMessageToChannel(userId, slackMessage);
-        return true;
+        const error = new Error('`You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`');
+        error.code = 400;
+        throw error;
     }
-    return false;
 }
 
 const onBreakGlass = async (body) => {
     const { text, channel_id, user_name, user_id } = body;
 
+    await testMinimumLength(user_id, text);
     const errors = await Promise.all([
-        await testMinimumLength(user_id, text),
         await testTotalActiveIncidents(user_id),
         await testIfIsChannelIncident(channel_id, user_id),
         await testTimeout(channel_id, user_name),
