@@ -94,10 +94,10 @@ const setChannelTopic = async (channel, topic) => {
     return await slackClient.post('/conversations.setTopic', { channel, topic });
 }
 
-const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slackChannel) => {
+const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slackChannel, is_private) => {
     const { data } = await slackClient.post('/conversations.create', {
-        name: slackChannel
-        // is_private:
+        name: slackChannel,
+        is_private,
     });
 
     let channelId = data.channel.id;

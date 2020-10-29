@@ -62,7 +62,7 @@ function verifySlackWebhook(body) {
     }
 }
 
-const createIncidentFlow = async (body) => {
+const createIncidentFlow = async (body, isPrivate) => {
     var incidentId = moment().format('YYYYMMDDHHmmss');
     var incidentName = body.text;
     var incidentCreatorSlackHandle = body.user_name;
@@ -78,7 +78,7 @@ const createIncidentFlow = async (body) => {
         incidentName = incidentSlackChannel;
     }
 
-    var incidentSlackChannelID = await slack.createSlackChannel(incidentName, incidentCreatorSlackUserId, incidentSlackChannel);
+    var incidentSlackChannelID = await slack.createSlackChannel(incidentName, incidentCreatorSlackUserId, incidentSlackChannel, isPrivate);
 
     pagerduty.alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle);
     createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle);
@@ -141,6 +141,17 @@ const onIncidentManagerResolved = async (message) => {
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
 
+const createFlow = (req, res, isPrivate) => {
+    var incidentChannelId = await createIncidentFlow(req.body, isPrivate);
+    console.log('Successful execution of security incident flow');
+    res.writeHead(200, {'Content-Type': 'application/json'});
+    res.write(JSON.stringify({
+        text: "Incident management process started. Join incident channel: slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentChannelId,
+        incident_channel_id: incidentChannelId
+    }));
+    res.end();
+}
+
 // Main application
 var express = require('express');
 var bodyParser = require('body-parser');
@@ -183,15 +194,14 @@ app.post('/break-glass', (req, res) => {
 
 app.post('/', async (req, res) => {
     verifySlackWebhook(req.body);
-    var incidentChannelId = await createIncidentFlow(req.body);
-    console.log('Successful execution of incident flow');
-    res.writeHead(200, {'Content-Type': 'application/json'});
-    res.write(JSON.stringify({
-        text: "Incident management process started. Join incident channel: slack://channel?team=" + process.env.SLACK_TEAM_ID + "&id=" + incidentChannelId,
-        incident_channel_id: incidentChannelId
-    }));
-    res.end();
+    createFlow(req, res, false);
 });
+
+app.post('/security', async (req, res) => {
+    verifySlackWebhook(req.body);
+    createFlow(req, res, true);
+});
+
 
 app.use(function (err, req, res, next) {
     console.log(err);
