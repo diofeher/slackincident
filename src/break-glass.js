@@ -66,7 +66,7 @@ const testTimeout = async(channelId, username) => {
 
 const testMinimumLength = async(userId, text) => {
     if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
-        const error = new Error('`You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`');
+        const error = new Error(`You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`);
         error.code = 400;
         throw error;
     }
