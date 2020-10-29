@@ -64,7 +64,7 @@ const testTimeout = async(channelId, username) => {
     return false;
 }
 
-const testMinimumLength = async(userId, text) => {
+const testMinimumLength = async(text) => {
     if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
         const error = new Error(`You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`);
         error.code = 400;
@@ -75,7 +75,8 @@ const testMinimumLength = async(userId, text) => {
 const onBreakGlass = async (body) => {
     const { text, channel_id, user_name, user_id } = body;
 
-    await testMinimumLength(user_id, text);
+    await testMinimumLength(text);
+
     const errors = await Promise.all([
         await testTotalActiveIncidents(user_id),
         await testIfIsChannelIncident(channel_id, user_id),

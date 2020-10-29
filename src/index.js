@@ -181,7 +181,7 @@ app.post('/break-glass', (req, res) => {
     res.end();
 });
 
-app.post('/', (req, res) => {
+app.post('/', async (req, res) => {
     verifySlackWebhook(req.body);
     var incidentChannelId = await createIncidentFlow(req.body);
     console.log('Successful execution of incident flow');
