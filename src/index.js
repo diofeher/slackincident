@@ -141,7 +141,7 @@ const onIncidentManagerResolved = async (message) => {
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
 }
 
-const createFlow = (req, res, isPrivate) => {
+const createFlow = async (req, res, isPrivate) => {
     var incidentChannelId = await createIncidentFlow(req.body, isPrivate);
     console.log('Successful execution of security incident flow');
     res.writeHead(200, {'Content-Type': 'application/json'});
