@@ -14,8 +14,8 @@ const createPostMortem = async (incidentName, epicKey, incidentSlackChannelId) =
         incident: {
             name: incidentName,
             when: date.format(now, 'YYYY-MM-DD HH:mm:ss'),
-            issueTracking: `jira: ${epicKey}`,
-            channel: `slack: ${incidentSlackChannelId}`
+            issueTracking: `jira:${epicKey}`,
+            channel: `slack:${incidentSlackChannelId}`
         }
     }).catch((err) => {
         console.log('createPostMortem.error', JSON.stringify(err));
