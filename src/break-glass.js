@@ -67,23 +67,33 @@ const testTimeout = async(channelId, username) => {
 const testMinimumLength = async(text) => {
     if(text.length < CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION) {
         const error = new Error(`You need to specify a good description (minimum ${CONSTANTS.BREAK_GLASS_MINIMUM_LEN_DESCRIPTION} characters) when using /break-glass. Use like: /break-glass I want superpowers!`);
-        error.code = 400;
+        error.code = 200;
         throw error;
     }
 }
 
-const onBreakGlass = async (body) => {
+const onBreakGlass = async (body, res, next) => {
     const { text, channel_id, user_name, user_id } = body;
 
-    await testMinimumLength(text);
+    try {
+        await testMinimumLength(text, res);
+        res.writeHead(200, {'Content-Type': 'application/json'});
+        res.write(JSON.stringify({
+            text: "Hey, we received your request and we are working it..."
+        }));
+        res.end();
+    } catch(err) {
+        next(err);
+        return;
+    }
 
-    const errors = await Promise.all([
+    const asyncErrors = await Promise.all([
         await testTotalActiveIncidents(user_id),
         await testIfIsChannelIncident(channel_id, user_id),
         await testTimeout(channel_id, user_name),
     ])
 
-    if(errors.some(Boolean)) {
+    if(asyncErrors.some(Boolean)) {
         return;
     };
 

@@ -10,16 +10,16 @@ const gSuiteClient = axios.create({
 });
 
 gSuiteClient.interceptors.response.use(function (response) {
-  const { data, config: { url, method }} = response;
+  const { data, status, config: { url, method }} = response;
 
-  if(!data.ok) {
-      console.error('data not ok', url, method, JSON.stringify(data.event));
+  if(!data.ok && status != 200) {
+      console.error('data not ok', response, url, method, JSON.stringify(data.event));
   }
   return response;
 }, function (error) {
   const { config, response } = error;
   console.log(`[-] Error when requesting ${config.url}!`);
-  console.log(`[-] Response ${response.status}: ${JSON.stringify(response.data)}!`);
+  console.log(`[-] Response ${response && response.status}: ${JSON.stringify(response.data)}!`);
   return Promise.reject(error);
 });
 

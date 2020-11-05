@@ -220,12 +220,19 @@ const getMembersChannel = async (channel) => {
     return data.members;
 }
 
+const lookupUserByEmail = async(email) => {
+    const { data } = await slackClient.get('/users.lookupByEmail', { params: { email }});
+    return data.user;
+}
+
 
 module.exports = {
     getProfileInfo,
     getBotInfo,
     getMembersChannel,
     getChannelInfo,
+    inviteUser,
+    lookupUserByEmail,
     sendEpicToChannel,
     createInitialMessage,
     sendConferenceCallDetailsToChannel,
