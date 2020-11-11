@@ -94,10 +94,10 @@ const setChannelTopic = async (channel, topic) => {
     return await slackClient.post('/conversations.setTopic', { channel, topic });
 }
 
-const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slackChannel) => {
+const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slackChannel, is_private) => {
     const { data } = await slackClient.post('/conversations.create', {
-        name: slackChannel
-        // is_private:
+        name: slackChannel,
+        is_private,
     });
 
     let channelId = data.channel.id;
@@ -108,10 +108,10 @@ const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slac
 }
 
 
-const inviteUser = async (channel, userId) => {
+const inviteUser = async (channel, users) => {
     await slackClient.post('/conversations.invite', {
         channel,
-        users: [userId]
+        users
     });
 }
 
@@ -220,12 +220,19 @@ const getMembersChannel = async (channel) => {
     return data.members;
 }
 
+const lookupUserByEmail = async(email) => {
+    const { data } = await slackClient.get('/users.lookupByEmail', { params: { email }});
+    return data.user;
+}
+
 
 module.exports = {
     getProfileInfo,
     getBotInfo,
     getMembersChannel,
     getChannelInfo,
+    inviteUser,
+    lookupUserByEmail,
     sendEpicToChannel,
     createInitialMessage,
     sendConferenceCallDetailsToChannel,

@@ -8,7 +8,12 @@ const COLORS = {
     GREEN: '#008000',
 }
 
+const INCIDENT = {
+    SECURITY_MANAGERS: process.env.SECURITY_MANAGERS || '',
+}
+
 module.exports = {
     COLORS,
     CONSTANTS,
+    INCIDENT,
 }
