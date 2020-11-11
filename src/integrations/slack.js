@@ -108,10 +108,10 @@ const createSlackChannel = async (incidentName, incidentCreatorSlackUserId, slac
 }
 
 
-const inviteUser = async (channel, userId) => {
+const inviteUser = async (channel, users) => {
     await slackClient.post('/conversations.invite', {
         channel,
-        users: [userId]
+        users
     });
 }
 

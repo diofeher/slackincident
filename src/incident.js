@@ -3,7 +3,7 @@ const pagerduty = require('./integrations/pagerduty');
 const googleapi = require('./integrations/googleapi');
 const moment = require('moment');
 const jira = require('./integrations/jira');
-const { COLORS } = require('./config');
+const config = require('./config');
 
 
 const removeInactiveIncidentMembers = async (channelID) => {
@@ -63,13 +63,13 @@ const createIncidentFlow = async (body, isPrivate) => {
     const incidentSlackChannelID = await slack.createSlackChannel(incidentName, incidentCreatorSlackUserId, incidentSlackChannel, isPrivate);
 
     pagerduty.alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle, isPrivate);
-    createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle);
+    createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle, isPrivate);
 
     return incidentSlackChannelID;
 }
 
 
-const createAdditionalResources = async (id, name, channelId, channel, creator) => {
+const createAdditionalResources = async (id, name, channelId, channel, creator, isPrivate) => {
     const { data: {event: eventDetails} } = await googleapi.registerIncidentEvent(id,
         name,
         creator,
@@ -92,7 +92,7 @@ const createAdditionalResources = async (id, name, channelId, channel, creator) 
     // Return a formatted message
     var slackMessage = slack.createInitialMessage(name, creator, channel, channelId);
 
-    if(process.env.SLACK_INCIDENTS_CHANNEL){
+    if(process.env.SLACK_INCIDENTS_CHANNEL && !isPrivate){
         var channelsToNotify = process.env.SLACK_INCIDENTS_CHANNEL.split(",");
         for(var i=0;i < channelsToNotify.length;i++){
             await slack.sendSlackMessageToChannel(channelsToNotify[i], slackMessage);
@@ -116,7 +116,7 @@ const onIncidentManagerResolved = async (message) => {
     var slackMessage = {
         icon_emoji: ':sweat_drops:',
         attachments: [
-            {color: COLORS.GREEN, text: `Controlled burning. Incident Resolved.`}
+            {color: config.COLORS.GREEN, text: `Controlled burning. Incident Resolved.`}
         ],
     };
     slack.sendSlackMessageToChannel(details.slack_channel, slackMessage);
@@ -132,11 +132,19 @@ const createFlow = async (req, res, isPrivate) => {
         incident_channel_id: incidentChannelId
     }));
     res.end();
+    return incidentChannelId;
+}
+
+const createPrivateFlow = async(req, res) => {
+    const channel = await createFlow(req, res, true);
+    const managers = config.INCIDENT.SECURITY_MANAGERS;
+    await slack.inviteUser(channel, managers);
 }
 
 
 module.exports = {
     createFlow,
+    createPrivateFlow,
     onIncidentManagerResolved,
     createAdditionalResources,
     createIncidentFlow,

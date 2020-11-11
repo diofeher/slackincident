@@ -5,7 +5,9 @@ const pagerduty = require('./integrations/pagerduty');
 const crypto = require('crypto');
 const qs = require('qs');
 const { onBreakGlass } = require('./break-glass');
-const { createFlow,
+const {
+    createFlow,
+    createPrivateFlow,
     onIncidentManagerResolved,
 } = require('./incident');
 
@@ -60,7 +62,7 @@ app.post('/', async (req, res, next) => {
 
 app.post('/security', async (req, res, next) => {
     await verifySlackWebhook(req, res, next);
-    createFlow(req, res, true);
+    createPrivateFlow(req, res);
 });
 
 
