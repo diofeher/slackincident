@@ -10,29 +10,11 @@ const { createFlow,
 } = require('./incident');
 
 
-const slackSigningSecret = process.env.SLACK_SIGNING_SECRET;
-
 const verifySlackWebhook = async(req, res, next) => {
-    let slackSignature = req.headers['x-slack-signature'];
-    let requestBody = qs.stringify(req.body,{ format:'RFC1738' });
-    let timestamp = req.headers['x-slack-request-timestamp'];
-
-    let time = Math.floor(new Date().getTime()/1000);
-    if (Math.abs(time - timestamp) > 300) {
-       console.log('Maybe a replay attack, ignored.');
-    }
-
-    let sigBasestring = 'v0:' + timestamp + ':' + requestBody;
-    let mySignature = 'v0=' +
-                   crypto.createHmac('sha256', slackSigningSecret)
-                         .update(sigBasestring, 'utf8')
-                         .digest('hex');
-    if (!crypto.timingSafeEqual(
-               Buffer.from(mySignature, 'utf8'),
-               Buffer.from(slackSignature, 'utf8'))
-    ) {
-        const error = new Error(`Verification failed for ${slackSignature}`);
-        error.code = 200;
+    const { body } = req;
+    if (!body || body.token !== process.env.SLACK_COMMAND_TOKEN) {
+        const error = new Error('Invalid credentials');
+        error.code = 401;
         throw error;
     }
 }
