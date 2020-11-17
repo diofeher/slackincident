@@ -23,7 +23,8 @@ const createPostMortem = async (incidentName, epicKey, incidentSlackChannelId) =
 }
 
 
-const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlackChannel) => {
+const createFollowupsEpic = async(incidentId, incidentName, incidentChannelId, incidentSlackChannel) => {
+    console.debug(`Creating JIRA Incident ${incidentId} ${incidentName} ${incidentChannelId} ${incidentSlackChannel}`);
     var jiraDomain = process.env.JIRA_DOMAIN;
     //Return if JIRA details are not specified. Assuming checking the domain is enough
     if (!jiraDomain) {
@@ -43,7 +44,7 @@ const createFollowupsEpic = async(incidentName, incidentChannelId, incidentSlack
             "project": {
                 "id": jiraProjectId
             },
-            "summary": incidentName,
+            "summary": incidentName || incidentId,
             "customfield_10009": incidentSlackChannel,
         }
     };

@@ -63,13 +63,24 @@ const createIncidentFlow = async (body, isPrivate) => {
     const incidentSlackChannelID = await slack.createSlackChannel(incidentName, incidentCreatorSlackUserId, incidentSlackChannel, isPrivate);
 
     pagerduty.alertIncidentManager(incidentName, incidentSlackChannelID, incidentCreatorSlackHandle, isPrivate);
-    createAdditionalResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle, isPrivate);
+
+    try {
+        createGoogleResources(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle, isPrivate);
+    } catch(err) {
+        console.error('Error when creating Google Resources', err.message);
+    }
+
+    try {
+        createJIRATicket(incidentId, incidentName, incidentSlackChannelID, incidentSlackChannel, incidentCreatorSlackHandle, isPrivate);
+    } catch(err) {
+        console.error('Error when creating JIRA and notifying', err.message);
+    }
 
     return incidentSlackChannelID;
 }
 
 
-const createAdditionalResources = async (id, name, channelId, channel, creator, isPrivate) => {
+const createGoogleResources = async (id, name, channelId, channel, creator, isPrivate) => {
     const { data: {event: eventDetails} } = await googleapi.registerIncidentEvent(id,
         name,
         creator,
@@ -86,8 +97,10 @@ const createAdditionalResources = async (id, name, channelId, channel, creator, 
     );
 
     sendIncidentLogFileToChannel(channelId, documentUrl);
+}
 
-    jira.createFollowupsEpic(name, channelId, channel);
+const createJIRATicket = async (id, name, channelId, channel, creator, isPrivate) => {
+    jira.createFollowupsEpic(id, name, channelId, channel);
 
     // Return a formatted message
     var slackMessage = slack.createInitialMessage(name, creator, channel, channelId);
@@ -146,7 +159,6 @@ module.exports = {
     createFlow,
     createPrivateFlow,
     onIncidentManagerResolved,
-    createAdditionalResources,
     createIncidentFlow,
     removeInactiveIncidentMembers,
     sendIncidentLogFileToChannel,
